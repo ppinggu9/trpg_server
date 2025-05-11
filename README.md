@@ -18,3 +18,14 @@ devDependencies:
 @types/express 5.0.1           globals 16.1.0                 typescript 5.8.3
 @types/jest 29.5.14            jest 29.7.0                    typescript-eslint 8.32.0
 ```
+
+## 의존성 설치 및 마아그레이션션
+```bash
+pnpm install
+pnpm run migraiton:generate
+pnpm run migration:run
+
+# 마이그레이션 롤백
+pnpm run migration:revert
+
+```
