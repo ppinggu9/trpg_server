@@ -1,5 +1,6 @@
 ## Installed Package
 ```bash
+# pnpm ls   <-- 이걸로 확인가능 typeorm, bcryptjs,config,typeorm-extension등 깔면된다
 dependencies:
 @nestjs/common 11.1.0            bcryptjs 3.0.2                   typeorm 0.3.23
 @nestjs/config 4.0.2             joi 17.13.3                      typeorm-extension 3.7.1
@@ -28,4 +29,13 @@ pnpm run migration:run
 # 마이그레이션 롤백
 pnpm run migration:revert
 
+```
+
+## DB
+```bash
+.env.example에서 바꿔야하는 부분을 수정 
+
+post는 자기가 설정한 포트로
+postgresql 부분과 DATABASE_DBNAME 수정
+DB쪽은 database까지만 만들면 나머지는 마이그레이션을 통해 생성
 ```
