@@ -38,4 +38,5 @@ pnpm run migration:revert
 post는 자기가 설정한 포트로
 postgresql 부분과 DATABASE_DBNAME 수정
 DB쪽은 database까지만 만들면 나머지는 마이그레이션을 통해 생성
+추가사항항
 ```
