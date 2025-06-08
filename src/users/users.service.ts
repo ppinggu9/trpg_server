@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
@@ -43,11 +48,11 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException("Cannot find User");
+      throw new NotFoundException('Cannot find User');
     }
-    return user
+    return user;
   }
-  
+
   async isUserExists(email: string): Promise<boolean> {
     return this.usersRepository
       .findOne({
@@ -78,7 +83,7 @@ export class UsersService {
       });
   }
 
-   // only for authenticating
+  // only for authenticating
   async getUserByEmail(email: string): Promise<User> {
     return this.usersRepository
       .findOne({
@@ -94,5 +99,4 @@ export class UsersService {
         }
       });
   }
-
 }

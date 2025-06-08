@@ -2,8 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Index(['token', 'revoked'])
 @Entity()
-export  class RefreshToken {
- 
+export class RefreshToken {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

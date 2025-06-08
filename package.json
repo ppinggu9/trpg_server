@@ -24,6 +24,7 @@
     "seed:run": "pnpm build && ts-node src/db/run-seeder.ts"
   },
   "dependencies": {
+    "@nestjs-modules/ioredis": "^2.0.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -31,14 +32,19 @@
     "@nestjs/mapped-types": "*",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-socket.io": "^11.1.2",
     "@nestjs/typeorm": "^11.0.0",
+    "@nestjs/websockets": "^11.1.2",
     "bcryptjs": "^3.0.2",
     "dotenv": "^16.5.0",
+    "ioredis": "^5.6.1",
     "joi": "^17.13.3",
     "passport-jwt": "^4.0.1",
     "pg": "^8.15.6",
+    "redis": "^5.1.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.1",
     "typeorm": "^0.3.23",
     "typeorm-extension": "^3.7.1",
     "typeorm-naming-strategies": "^4.1.0"

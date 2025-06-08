@@ -12,7 +12,6 @@ import { RefreshTokenRepository } from './refresh-token.repository';
 import { jwtPayloadDto } from './types/jwt-payload.dto';
 import { JwtService } from '@nestjs/jwt';
 
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -70,7 +69,7 @@ export class AuthService {
           userInfo.email,
           refreshToken,
           expiresAt,
-        )
+        ),
       ]);
 
       return {

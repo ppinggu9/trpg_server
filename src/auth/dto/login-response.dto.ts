@@ -1,5 +1,5 @@
 // auth/dto/login-response.dto.ts
-import { UserRole } from "src/users/entities/user-role.enum";
+import { UserRole } from 'src/users/entities/user-role.enum';
 
 class UserResponse {
   name: string;

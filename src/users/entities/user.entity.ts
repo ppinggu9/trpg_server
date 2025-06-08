@@ -5,8 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  OneToMany,
+  ManyToMany,
 } from 'typeorm';
 import { UserRole } from './user-role.enum';
+import { Room } from 'src/room/entities/room.entity';
 
 @Entity('users')
 export class User {
@@ -24,6 +27,14 @@ export class User {
 
   @Column({ name: 'password_hash' })
   passwordHash: string;
+
+  // 생성한 방 목록 (일대다 관계)
+  @OneToMany(() => Room, (room) => room.creator)
+  createdRooms: Room[];
+
+  // 참여한 방 목록 (다대다 관계, 양방향)
+  @ManyToMany(() => Room, (room) => room.participants)
+  joinedRooms: Room[];
 
   @Column({
     type: 'enum',

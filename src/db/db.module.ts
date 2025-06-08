@@ -14,6 +14,7 @@ import { createNestJSDatasource } from './data-source';
         return {
           ...options,
           migrationsRun: false,
+          logging: true,
         };
       },
     }),
