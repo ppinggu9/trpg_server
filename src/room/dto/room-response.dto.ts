@@ -19,3 +19,11 @@ export class RoomResponseDto {
     };
   }
 }
+// 메시지 전달 
+export class BaseResponse<T> {
+  constructor(
+    public readonly message: string,
+    public readonly data: T,
+  ) {}
+}
+

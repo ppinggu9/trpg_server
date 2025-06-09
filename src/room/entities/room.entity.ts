@@ -45,14 +45,15 @@ export class Room {
 
   // 풀 스텍 검색 여기서는 null true 데이터베이스 마이그레이션에서 NOT NULL로 강제 대신 name도 강제 NOT  NULL
   // select는 필요한 경우 addselect로 명시사용
-  @Column({
-    type: 'tsvector',
-    nullable: true,
-    insert: false,
-    select: false, // 기본쿼리 추가 x
-    update: false,
-    asExpression: `to_tsvector('simple', name)`,
-    generatedType: 'STORED',
-  })
-  searchVector: string;
+  
+  // 영어용 텍스트 벡터
+  @Column({ type: 'tsvector', nullable: true, select: false, insert: false, update: false })
+  searchVectorEn: string;
+
+  // 한국어용 텍스트 벡터
+  @Column({ type: 'tsvector', nullable: true, select: false, insert: false, update: false })
+  searchVectorKo: string;
+
+  // 풀 스텍 검색 여기서는 null true 데이터베이스 마이그레이션에서 NOT NULL로 강제 대신 name도 강제 NOT  NULL
+  // select는 필요한 경우 addselect로 명시사용
 }
