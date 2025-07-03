@@ -1,4 +1,3 @@
-// src/character/entities/weapon.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Character } from './character.entity';
 
@@ -32,6 +31,9 @@ export class Weapon {
 
     @Column({ default: 0 }) // 공격 성공 시도 비율 (%)
     successRate: number;
+    
+    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    createdAt: Date;
 
     // N:1 관계 - Character
     @ManyToOne(() => Character, (character) => character.weapons)
