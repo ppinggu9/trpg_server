@@ -1,8 +1,9 @@
 import { Expose, Type } from 'class-transformer';
 import { StatsResponseDto } from './stats-response.dto';
 import { SkillResponseDto } from './skill-response.dto';
-import { SanLossResponseDto } from './san-loss-response.dto';
 import { WeaponResponseDto } from './weapon-response.dto';
+import { SanLossResponseDto } from './san-loss-response.dto';
+
 
 export class CharacterDetailResponseDto {
   @Expose()
@@ -33,5 +34,6 @@ export class CharacterDetailResponseDto {
   weapons: WeaponResponseDto[];
 
   @Expose()
+  @Type(() => SanLossResponseDto)
   sanLosses: SanLossResponseDto[];
 }

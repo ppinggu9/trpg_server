@@ -8,7 +8,7 @@ import { Stats } from './entities/stats.entity';
 import { Weapon } from './entities/weapon.entity';
 import { SanLoss } from './entities/san-loss.entity';
 import { CharacterOwnershipGuard } from './guards/character-ownership.guard';
-import { CharacterExistsGuard } from './guards/charcter-exists.guard';
+import { CharacterExistsGuard } from './guards/character-exists.guard';
 
 
 @Module({
