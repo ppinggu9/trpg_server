@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RoomResponseDto } from './dto/room-response.dto';
 import { RoomDetailResponseDto } from './dto/room-detail-response.dto';
 import { RoomResponseInterceptor } from './interceptors/room-response.interceptors';

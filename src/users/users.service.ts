@@ -4,11 +4,14 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserPasswordRequest } from './dto/update-user-password.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from './entities/user.entity';
 import * as bcrypt from 'bcryptjs';
+import { UpdateUserNicknameRequest } from './dto/update-user-nickname.dto';
+
 
 @Injectable()
 export class UsersService {
@@ -40,17 +43,29 @@ export class UsersService {
   }
 
   async getUserById(id: number): Promise<User> {
-    const user = await this.usersRepository.findOne({
+    return this.usersRepository.findOne({
       where: {
         id: id,
       },
       withDeleted: true,
     });
+  }
 
-    if (!user) {
-      throw new NotFoundException('Cannot find User');
-    }
-    return user;
+  // only for authenticating
+  async getUserByEmail(email: string): Promise<User> {
+    return this.usersRepository
+      .findOne({
+        where: { email: email },
+      })
+      .then((user) => {
+        if (user) {
+          return user;
+        } else {
+          throw new NotFoundException(
+            `This email ${email} user could not be found`,
+          );
+        }
+      });
   }
 
   async isUserExists(email: string): Promise<boolean> {
@@ -83,20 +98,48 @@ export class UsersService {
       });
   }
 
-  // only for authenticating
-  async getUserByEmail(email: string): Promise<User> {
-    return this.usersRepository
-      .findOne({
-        where: { email: email },
-      })
-      .then((user) => {
-        if (user) {
-          return user;
-        } else {
-          throw new NotFoundException(
-            `This email ${email} user could not be found`,
-          );
-        }
-      });
+  async updateUserNickname(
+    userId: number,
+    updateDto: UpdateUserNicknameRequest,
+  ): Promise<User> {
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new NotFoundException('This user could not be found.');
+    }
+
+    const nicknameExist = await this.isNicknameAvailable(updateDto.nickname);
+
+    if (nicknameExist) {
+      throw new ConflictException(
+        `This nickname ${updateDto.nickname} is already existed!`,
+      );
+    }
+
+    user.nickname = updateDto.nickname;
+    return this.usersRepository.save(user);
+  }
+
+  async updateUserPassword(
+    userId: number,
+    updateDto: UpdateUserPasswordRequest,
+  ): Promise<User> {
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new NotFoundException('This user could not be found.');
+    }
+    const hashedPassword = await bcrypt.hash(updateDto.password, 10);
+    user.passwordHash = hashedPassword;
+    return this.usersRepository.save(user);
+  }
+
+  async softDeleteUser(userId: number): Promise<void> {
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new NotFoundException('This user could not be found.');
+    }
+    const result = await this.usersRepository.softDelete(userId);
+    if (result.affected !== 1) {
+      throw new InternalServerErrorException('Internal Server Error');
+    }
   }
 }

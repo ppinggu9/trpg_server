@@ -2,7 +2,6 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  DeleteDateColumn,
 } from 'typeorm';
 
 @Entity()

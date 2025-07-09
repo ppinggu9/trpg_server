@@ -1,12 +1,24 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import 'reflect-metadata';
+import { ValidationPipe } from '@nestjs/common';
+import {
+  initializeTransactionalContext,
+  StorageDriver,
+} from 'typeorm-transactional';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { DataSource } from 'typeorm';
 
 async function bootstrap() {
+  initializeTransactionalContext({ storageDriver: StorageDriver.AUTO });
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+
+  if (configService.get<boolean>('DATABASE_MIGRATIONS_RUN')) {
+    const dataSource = app.get(DataSource);
+    await dataSource.runMigrations({ transaction: 'all' });
+  }
+
   const port = configService.get<number>('HTTP_SERVER_POST', 3000);
   const frontEndOrigin = configService.get<string>(
     'FRONTEND_ORIGIN',
@@ -20,6 +32,18 @@ async function bootstrap() {
     exposedHeaders: ['Set-Cookie'],
   });
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
+
+  const config = new DocumentBuilder()
+    .setTitle('Echo-Tube-API')
+    .setDescription('The echotube API description')
+    .setVersion('1.0')
+    .addTag('echo-tube')
+    .addBearerAuth()
+    .build();
+
+  const documentFactory = () => SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-docs', app, documentFactory);
+
   await app.listen(port);
 }
 bootstrap();

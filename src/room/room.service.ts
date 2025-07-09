@@ -8,7 +8,7 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, QueryRunner } from 'typeorm';
 import { Room } from './entities/room.entity';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '@/users/entities/user.entity';
 import { compare, hash } from 'bcryptjs';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
@@ -21,10 +21,8 @@ import { RoomResponseDto } from './dto/room-response.dto';
 export class RoomService {
   private readonly logger = new Logger(RoomService.name);
 
-  private failedLoginAttempts = new Map<
-    string,
-    { count: number; timestamp: number }
-  >();
+  private failedLoginAttempts = new Map<string,
+  { count: number; timestamp: number }>();
 
   constructor(
     @InjectRepository(Room)

@@ -1,16 +1,18 @@
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from '@/users/users.service';
 import {
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { LoginResponseDto } from './dto/login-response.dto';
-import { User } from 'src/users/entities/user.entity';
 import { RefreshTokenRepository } from './refresh-token.repository';
 import { jwtPayloadDto } from './types/jwt-payload.dto';
-import { JwtService } from '@nestjs/jwt';
+import { User } from '@/users/entities/user.entity';
+import { Transactional } from 'typeorm-transactional';
+import { LoginResponseDto } from './dto/login-response.dto';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -32,6 +34,7 @@ export class AuthService {
     }
   }
 
+  @Transactional()
   async login(user: Partial<User>): Promise<LoginResponseDto> {
     const userId = user.id;
     if (!userId) {
@@ -58,19 +61,18 @@ export class AuthService {
       id: userInfo.id,
       email: userInfo.email,
       role: userInfo.role,
+      nonce: crypto.randomUUID(),
     };
 
     try {
       const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-      await Promise.all([
-        this.refreshTokenRepo.saveToken(
-          userInfo.email,
-          refreshToken,
-          expiresAt,
-        ),
-      ]);
+      await this.refreshTokenRepo.saveToken(
+        userInfo.email,
+        refreshToken,
+        expiresAt,
+      );
 
       return {
         access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
@@ -92,6 +94,7 @@ export class AuthService {
     }
   }
 
+  @Transactional()
   async refreshToken(token: string) {
     try {
       const storedToken = await this.refreshTokenRepo.findValidToken(token);
@@ -108,6 +111,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
+        nonce: crypto.randomUUID(),
       } satisfies jwtPayloadDto;
       const newRefreshToken = this.jwtService.sign(payload, {
         expiresIn: '7d',
@@ -141,6 +145,23 @@ export class AuthService {
       return !!payload; // 유효한 토큰이면 true 반환
     } catch (error) {
       return false; // 토큰이 유효하지 않으면 false 반환
+    }
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    try {
+      const storedToken =
+        await this.refreshTokenRepo.findValidToken(refreshToken);
+      if (!storedToken) {
+        throw new UnauthorizedException('Invalid refresh token.');
+      }
+      await this.refreshTokenRepo.revokeToken(storedToken.id);
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      console.error(error);
+      throw new InternalServerErrorException('Logout failed.');
     }
   }
 }
