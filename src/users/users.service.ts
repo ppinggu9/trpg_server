@@ -18,7 +18,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async createUser(createUserDto: CreateUserDto) {
     const { name, nickname, email, password } = createUserDto;
@@ -49,6 +49,18 @@ export class UsersService {
       },
       withDeleted: true,
     });
+  }
+
+  async getActiveUserById(id: number): Promise<User> {
+    const user = await this.usersRepository.findOne({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    return user;
   }
 
   // only for authenticating

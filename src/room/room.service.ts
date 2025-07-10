@@ -6,55 +6,41 @@ import {
 } from '@nestjs/common';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, QueryRunner } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Room } from './entities/room.entity';
 import { User } from '@/users/entities/user.entity';
 import { compare, hash } from 'bcryptjs';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
-
-// 🔽 DTO import 추가
 import { RoomDetailResponseDto } from './dto/room-detail-response.dto';
 import { RoomResponseDto } from './dto/room-response.dto';
+import { UsersService } from '@/users/users.service';
+import { Transactional } from 'typeorm-transactional';
 
 @Injectable()
 export class RoomService {
   private readonly logger = new Logger(RoomService.name);
 
-  private failedLoginAttempts = new Map<string,
-  { count: number; timestamp: number }>();
+  private failedLoginAttempts = new Map<string, { count: number; timestamp: number }>();
 
   constructor(
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    private readonly dataSource: DataSource,
+    private readonly usersService: UsersService,
     private readonly configService: ConfigService,
   ) {}
 
   // 방 생성
-  async createRoom(
-    dto: CreateRoomDto,
-    creatorId: number,
-  ): Promise<RoomDetailResponseDto> {
+  @Transactional()
+  async createRoom(dto: CreateRoomDto, creatorId: number): Promise<RoomDetailResponseDto> {
     this.logger.log(`[CREATE_ROOM] 방 생성 요청: ${dto.name}`);
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
 
     try {
-      const creator = await this.userRepository.findOneBy({ id: creatorId });
-      if (!creator) {
-        this.logger.warn(`[CREATE_ROOM] 사용자를 찾을 수 없음: ${creatorId}`);
-        throw new NotFoundException('User not found');
-      }
+      const creator = await this.usersService.getActiveUserById(creatorId);
 
-      const hashedPassword = dto.password
-        ? await hash(dto.password, 10)
-        : undefined;
+      const hashedPassword = dto.password ? await hash(dto.password, 10) : undefined;
 
-      const room = queryRunner.manager.create(Room, {
+      const room = this.roomRepository.create({
         name: dto.name,
         password: hashedPassword,
         maxParticipants: dto.maxParticipants,
@@ -62,35 +48,27 @@ export class RoomService {
         participants: [creator],
       });
 
-      const savedRoom = await queryRunner.manager.save(room);
-      await queryRunner.commitTransaction();
-
+      const savedRoom = await this.roomRepository.save(room);
       this.logger.log(`[CREATE_ROOM] 방 생성 성공: ${savedRoom.id}`);
       return RoomDetailResponseDto.fromEntity(savedRoom);
     } catch (error) {
       this.logger.error(`[CREATE_ROOM] 방 생성 실패: ${error.message}`);
-      await queryRunner.rollbackTransaction();
-      throw new InternalServerErrorException(
-        `Room creation failed: ${error.message}`,
-      );
-    } finally {
-      await queryRunner.release();
+      throw new InternalServerErrorException(`Room creation failed: ${error.message}`);
     }
   }
 
   // 방 참가
+  @Transactional()
   async joinRoom(
     roomId: string,
     userId: number,
     password?: string,
   ): Promise<void> {
     this.logger.log(`[JOIN_ROOM] 방 참가 요청: ${roomId}, 사용자 ID: ${userId}`);
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
 
     try {
-      const room = await queryRunner.manager.findOne(Room, {
+      // 1. 방 조회
+      const room = await this.roomRepository.findOne({
         where: { id: roomId },
         relations: ['participants'],
       });
@@ -100,19 +78,20 @@ export class RoomService {
         throw new NotFoundException('방을 찾을 수 없습니다.');
       }
 
+      // 2. 비밀번호 검증
       await this.validatePassword(room, password);
-      await this.checkParticipantLimit(room);
-      const user = await this.findUser(userId);
-      await this.addParticipant(queryRunner, room, user);
 
-      this.logger.log(`[JOIN_ROOM] 방 참가 성공: ${roomId}, 사용자 ID: ${userId}`);
-      await queryRunner.commitTransaction();
+      // 3. 인원 제한 검사
+      await this.checkParticipantLimit(room);
+
+      // 4. 삭제되지 않은 사용자인지 확인
+      const user = await this.usersService.getActiveUserById(userId);
+
+      // 5. 방 참가 처리
+      await this.addParticipant(room, user);
     } catch (error) {
       this.logger.error(`[JOIN_ROOM] 방 참가 실패: ${error.message}`);
-      await queryRunner.rollbackTransaction();
       throw error;
-    } finally {
-      await queryRunner.release();
     }
   }
 
@@ -162,25 +141,11 @@ export class RoomService {
     }
   }
 
-  // 유저 확인
-  private async findUser(userId: number): Promise<User> {
-    const user = await this.userRepository.findOneBy({ id: userId });
-    if (!user) {
-      this.logger.warn(`[FIND_USER] 사용자를 찾을 수 없음: ${userId}`);
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
-    }
-    return user;
-  }
-
   // 참가자 추가
-  private async addParticipant(
-    queryRunner: QueryRunner,
-    room: Room,
-    user: User,
-  ): Promise<void> {
+  private async addParticipant(room: Room, user: User): Promise<void> {
     if (!room.participants.some((p) => p.id === user.id)) {
       room.participants.push(user);
-      await queryRunner.manager.save(room);
+      await this.roomRepository.save(room);
       this.logger.log(`[ADD_PARTICIPANT] 사용자 추가됨: ${user.id}, 방 ID: ${room.id}`);
     }
   }
@@ -204,10 +169,8 @@ export class RoomService {
         });
       }
 
-      qb.leftJoinAndSelect('room.creator', 'creator').leftJoinAndSelect(
-        'room.participants',
-        'participants',
-      );
+      qb.leftJoinAndSelect('room.creator', 'creator')
+        .leftJoinAndSelect('room.participants', 'participants');
 
       const rooms = await qb.getMany();
       this.logger.log(`[SEARCH_ROOMS] 검색 성공, 결과 수: ${rooms.length}`);
