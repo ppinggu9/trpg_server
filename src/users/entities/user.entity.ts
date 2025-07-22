@@ -5,8 +5,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
-  OneToMany,
-  ManyToMany,
+  OneToOne,
+  JoinColumn,
+  ManyToOne,
 } from 'typeorm';
 import { UserRole } from './user-role.enum';
 import { ApiProperty } from '@nestjs/swagger';
@@ -31,7 +32,7 @@ export class User {
   @Column({ unique: true, length: 255 })
   email: string;
 
-  @Column({ name: 'password_hash' })
+  @Column({ name: 'password_hash', select: false })
   passwordHash: string;
 
   @ApiProperty({ enum: UserRole, default: UserRole.USER })
@@ -54,11 +55,13 @@ export class User {
   @DeleteDateColumn()
   deletedAt: Date | null;
 
-   // 생성한 방 목록 (일대다 관계)
-  @OneToMany((() => Room), (room) => room.creator) // forwardRef 직접 전달
-  createdRooms: Room[];
+  // 유저가 생성한 방 
+  @OneToOne(() => Room, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'created_room_id' }) // 외래키 컬럼명
+  createdRoom: Room | null;
 
-  // 참여한 방 목록 (다대다 관계)
-  @ManyToMany((() => Room), (room) => room.participants) // forwardRef 직접 전달
-  joinedRooms: Room[];
+  // 유저가 참여한 방
+  @ManyToOne(() => Room, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'current_room_id' }) // 외래키 컬럼명
+  currentRoom: Room | null;
 }

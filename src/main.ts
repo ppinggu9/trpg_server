@@ -31,7 +31,13 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Set-Cookie'],
     exposedHeaders: ['Set-Cookie'],
   });
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('Echo-Tube-API')

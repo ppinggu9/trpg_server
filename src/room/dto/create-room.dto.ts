@@ -1,30 +1,29 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
-  IsOptional,
-  MinLength,
-  MaxLength,
   IsInt,
   Min,
   Max,
+  MinLength,
+  MaxLength,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
 
 export class CreateRoomDto {
+  @ApiProperty({ description: '방 이름 (1~50자)' })
   @IsString()
-  @MinLength(3)
+  @MinLength(1)
   @MaxLength(50)
   name: string;
 
+  @ApiProperty({ description: '비밀번호 (4자 이상)' })
   @IsString()
-  @IsOptional()
   @MinLength(4)
-  @MaxLength(20)
   password?: string;
 
-  // 기본인원 2명
-  @Transform(({ value }) => parseInt(value))
+  @ApiProperty({ description: '최대 참여자 수 (2~8)', default: 2 })
   @IsInt()
   @Min(2)
-  @Max(20)
+  @Max(8)
   maxParticipants: number = 2;
 }
+

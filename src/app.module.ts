@@ -4,11 +4,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { DbModule } from './db/db.module';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { RoomModule } from './room/room.module';
 import { CharacterModule } from './character/character.module';
-import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
@@ -26,16 +25,7 @@ import { CacheModule } from '@nestjs/cache-manager';
         DATABASE_LOGGING: Joi.boolean().required(),
         DATABASE_MIGRATIONS_RUN: Joi.boolean().required(),
         CACHE_TTL: Joi.number().default(3600),
-        REDIS_URI: Joi.string().default('redis://localhost:6379'),
       }),
-    }),
-    CacheModule.registerAsync({
-      isGlobal: true, // 전역 모듈로 설정
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        ttl: configService.get<number>('CACHE_TTL', 3600),
-      }),
-      inject: [ConfigService, ],
     }),
     UsersModule,
     DbModule,

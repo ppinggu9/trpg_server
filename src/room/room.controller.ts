@@ -6,57 +6,45 @@ import {
   Param,
   UseGuards,
   Req,
-  Query,
-  UseInterceptors,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { User } from '@/users/entities/user.entity';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
-import { RoomResponseDto } from './dto/room-response.dto';
-import { RoomDetailResponseDto } from './dto/room-detail-response.dto';
-import { RoomResponseInterceptor } from './interceptors/room-response.interceptors';
+import { RoomParticipantDto } from './dto/room-participant.dto';
 
-@Controller('room')
+@Controller('rooms')
 @UseGuards(JwtAuthGuard)
-@UseInterceptors(RoomResponseInterceptor) 
 export class RoomController {
-  constructor(private readonly roomService: RoomService) {}
+  constructor(private readonly roomService: RoomService) { }
 
+  // 방 생성
   @Post()
   async createRoom(
-    @Body() createRoomDto: CreateRoomDto,
-    @Req() req: any,
-  ): Promise<RoomResponseDto> {
-    const creatorId = parseInt(req.user.id, 10);
-    const room = await this.roomService.createRoom(createRoomDto, creatorId);
-    return room;
+    @Body() dto: CreateRoomDto,
+    @Req() req: { user: User },
+  ) {
+    const creatorId = req.user.id;
+    return this.roomService.createRoom(dto, creatorId);
   }
 
   // 방 참여
   @Post(':id/join')
   async joinRoom(
-    @Param('id') roomId: string,
-    @Body('password') password: string,
-    @Req() req: any,
-  ): Promise<void> {
+    @Param('id', ParseIntPipe) roomId: number,
+    @Req() req: { user: User },
+    @Body('password') password?: string,
+  ) {
     const userId = req.user.id;
-    await this.roomService.joinRoom(roomId, userId, password);
+    return this.roomService.joinRoom(roomId, userId, password);
   }
 
-  // 방 검색
-  @Get()
-  async searchRooms(
-    @Query('query') query: string,
-    @Query('language') language: string = 'ko_kr',
-  ): Promise<RoomResponseDto[]> {
-    const rooms = await this.roomService.searchRooms(query, language);
-    return rooms;
-  }
-
-  // 방 상세 정보 조회
-  @Get(':id')
-  async getRoomById(@Param('id') id: string): Promise<RoomDetailResponseDto> {
-    const room = await this.roomService.getRoomById(id);
-    return room;
+  // 방 참여자 목록 조회
+  @Get(':id/participants')
+  async getParticipants(
+    @Param('id') roomId: number,
+  ): Promise<RoomParticipantDto[]> {
+    return this.roomService.getParticipants(roomId);
   }
 }

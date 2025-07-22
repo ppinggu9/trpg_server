@@ -198,8 +198,8 @@ describe('AuthService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
-        createdRooms: [], 
-        joinedRooms: [],  
+        createdRoom: null, 
+        currentRoom: null,  
       };
       jest
         .spyOn(refreshTokenRepo, 'findValidToken')
