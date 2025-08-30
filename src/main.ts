@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
@@ -8,10 +9,14 @@ import {
 } from 'typeorm-transactional';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { DataSource } from 'typeorm';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
   initializeTransactionalContext({ storageDriver: StorageDriver.AUTO });
   const app = await NestFactory.create(AppModule);
+
+  app.useWebSocketAdapter(new IoAdapter(app));
+
   const configService = app.get(ConfigService);
 
   if (configService.get<boolean>('DATABASE_MIGRATIONS_RUN')) {
@@ -40,10 +45,10 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('Echo-Tube-API')
-    .setDescription('The echotube API description')
+    .setTitle('Trpg_Sever-API')
+    .setDescription('The Trpg_Sever-API description')
     .setVersion('1.0')
-    .addTag('echo-tube')
+    .addTag('Trpg_Sever-API')
     .addBearerAuth()
     .build();
 

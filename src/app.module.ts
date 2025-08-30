@@ -7,7 +7,6 @@ import { DbModule } from './db/db.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { RoomModule } from './room/room.module';
-import { CharacterModule } from './character/character.module';
 
 @Module({
   imports: [
@@ -24,16 +23,14 @@ import { CharacterModule } from './character/character.module';
         DATABASE_DROP_SCHEMA: Joi.boolean().required(),
         DATABASE_LOGGING: Joi.boolean().required(),
         DATABASE_MIGRATIONS_RUN: Joi.boolean().required(),
-        CACHE_TTL: Joi.number().default(3600),
       }),
     }),
     UsersModule,
     DbModule,
     AuthModule,
     RoomModule,
-    CharacterModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

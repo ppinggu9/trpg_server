@@ -1,5 +1,7 @@
 import {
   ConflictException,
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -11,14 +13,17 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import * as bcrypt from 'bcryptjs';
 import { UpdateUserNicknameRequest } from './dto/update-user-nickname.dto';
-
+import { Transactional } from 'typeorm-transactional';
+import { RoomParticipantService } from '@/room/room-participant.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) { }
+    @Inject(forwardRef(() => RoomParticipantService))
+    private roomParticipantService: RoomParticipantService,
+  ) {}
 
   async createUser(createUserDto: CreateUserDto) {
     const { name, nickname, email, password } = createUserDto;
@@ -144,14 +149,21 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
+  @Transactional()
   async softDeleteUser(userId: number): Promise<void> {
     const user = await this.getUserById(userId);
     if (!user) {
       throw new NotFoundException('This user could not be found.');
     }
+    await this.roomParticipantService.leaveAllRoomsByUserId(user.id);
     const result = await this.usersRepository.softDelete(userId);
     if (result.affected !== 1) {
-      throw new InternalServerErrorException('Internal Server Error');
+      throw new InternalServerErrorException('User deletion failed');
     }
+  }
+
+  // room에서 사용
+  async updateUser(user: User): Promise<User> {
+    return this.usersRepository.save(user);
   }
 }

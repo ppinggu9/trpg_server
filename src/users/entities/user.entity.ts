@@ -8,14 +8,15 @@ import {
   OneToOne,
   JoinColumn,
   ManyToOne,
+  OneToMany,
 } from 'typeorm';
 import { UserRole } from './user-role.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { Room } from '@/room/entities/room.entity';
+import { RoomParticipant } from '@/room/entities/room-participant.entity';
 
 @Entity('users')
 export class User {
-
   @ApiProperty({ example: 1 })
   @PrimaryGeneratedColumn()
   id: number;
@@ -55,13 +56,20 @@ export class User {
   @DeleteDateColumn()
   deletedAt: Date | null;
 
-  // 유저가 생성한 방 
-  @OneToOne(() => Room, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'created_room_id' }) // 외래키 컬럼명
+  // 유저가 생성한 방
+  @OneToOne(() => Room, (room) => room.creator, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'created_room_id' })
   createdRoom: Room | null;
 
-  // 유저가 참여한 방
-  @ManyToOne(() => Room, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'current_room_id' }) // 외래키 컬럼명
+  // 유저가 참여한 방 목록
+  @OneToMany(() => RoomParticipant, (participant) => participant.user)
+  roomParticipant: RoomParticipant[];
+
+  // (옵션) 현재 참여 중인 방
+  @ManyToOne(() => Room)
+  @JoinColumn({ name: 'current_room_id' })
   currentRoom: Room | null;
 }

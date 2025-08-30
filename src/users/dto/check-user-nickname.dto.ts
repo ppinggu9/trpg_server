@@ -1,4 +1,6 @@
-import { PartialType, PickType } from '@nestjs/swagger';
+import { PickType } from '@nestjs/swagger';
 import { CreateUserDto } from './create-user.dto';
 
-export class CheckNicknameRequest extends PickType(CreateUserDto, ['nickname'] as const) {}
+export class CheckNicknameRequest extends PickType(CreateUserDto, [
+  'nickname',
+] as const) {}

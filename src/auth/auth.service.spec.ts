@@ -52,7 +52,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => { });
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -198,8 +198,9 @@ describe('AuthService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
-        createdRoom: null, 
-        currentRoom: null,  
+        createdRoom: null,
+        currentRoom: null,
+        roomParticipant: null,
       };
       jest
         .spyOn(refreshTokenRepo, 'findValidToken')
