@@ -30,6 +30,9 @@ export class RoomResponseDto {
   })
   participants: RoomParticipantDto[];
 
+  @ApiProperty({ description: '방장 닉네임' })
+  creatorNickname: string;
+
   static fromEntity(room: Room): RoomResponseDto {
     const participantsData =
       room.participants
@@ -55,6 +58,7 @@ export class RoomResponseDto {
         nickname: p.nickname ?? '익명',
         role: p.role,
       })),
+      creatorNickname: room.creator.nickname,
     };
   }
 }

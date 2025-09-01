@@ -67,7 +67,7 @@ export class RoomService {
 
     const updatedRoom = await this.roomRepository.findOne({
       where: { id: savedRoom.id },
-      relations: ['participants', 'participants.user'],
+      relations: ['creator', 'participants', 'participants.user'],
     });
 
     return {
@@ -87,10 +87,28 @@ export class RoomService {
       `[JOIN_ROOM] 방 ID: ${roomId}, 사용자 ID: ${userId} 참여 시도`,
     );
 
-    // 방 조회
-    const room = await this.findActiveRoom(roomId);
+    // 1. 방이 존재하는지 확인 (삭제된 방도 포함)
+    const room = await this.roomRepository.findOne({
+      where: { id: roomId },
+      withDeleted: true,
+      relations: ['creator', 'participants', 'participants.user'],
+    });
 
-    // 검증
+    if (!room) {
+      throw new NotFoundException({
+        message: ROOM_ERRORS.NOT_FOUND,
+        details: { roomId },
+      });
+    }
+
+    // 2. 방이 삭제된 상태인지 먼저 확인 (동시성 문제 처리)
+    if (room.deletedAt) {
+      throw new ConflictException({
+        message: ROOM_ERRORS.ROOM_JOIN_CONFLICT,
+      });
+    }
+
+    // 3. 검증 (이제 room은 활성화된 방임이 보장됨)
     await this.roomValidator.validateRoomJoin(room, userId, dto.password);
 
     // 참가 로직
@@ -296,6 +314,7 @@ export class RoomService {
       .where('room.id = :roomId', { roomId })
       .leftJoinAndSelect('room.participants', 'participants')
       .leftJoinAndSelect('participants.user', 'user')
+      .leftJoinAndSelect('room.creator', 'creator')
       .getOne();
 
     if (!room) {

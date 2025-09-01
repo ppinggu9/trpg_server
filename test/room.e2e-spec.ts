@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { ParticipantRole } from '@/common/enums/participant-role.enum';
 import { ROOM_MESSAGES, ROOM_ERRORS } from '@/room/constants/room.constants';
 import {
@@ -11,10 +11,15 @@ import {
   expectErrorResponse,
 } from './utils/test.util';
 import { createUserDto } from '@/users/factory/user.factory';
+import { User } from '@/users/entities/user.entity';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { TestingModule } from '@nestjs/testing';
 
 describe('Room API (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let module: TestingModule;
+  let userRepository: Repository<User>;
 
   // 테스트 사용자 토큰
   let creatorToken: string;
@@ -27,9 +32,12 @@ describe('Room API (e2e)', () => {
   const testRoomPassword = '123';
   const testRoomMaxParticipants = 4;
 
+  const creatorInfo = createUserDto();
+
   beforeAll(async () => {
     const testApp = await setupTestApp();
-    ({ app, dataSource } = testApp);
+    ({ app, module, dataSource } = testApp);
+    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
   }, 30000);
 
   afterAll(async () => {
@@ -41,7 +49,7 @@ describe('Room API (e2e)', () => {
     await truncateAllTables(dataSource);
 
     // 테스트 사용자 생성 및 로그인
-    const creatorInfo = createUserDto();
+
     const participantInfo = createUserDto();
     const anotherParticipantInfo = createUserDto();
 
@@ -203,7 +211,7 @@ describe('Room API (e2e)', () => {
       expectErrorResponse(response, 400, ROOM_ERRORS.PASSWORD_MISMATCH);
     });
 
-    it('방이 꽉 찬 경우 - 실패', async () => {
+    it('방이 꽉 찬 경우 - 실패 (검증 강화)', async () => {
       // 방이 꽉 찰 때까지 참가
       for (let i = 0; i < testRoomMaxParticipants - 1; i++) {
         const userInfo = createUserDto();
@@ -215,6 +223,19 @@ describe('Room API (e2e)', () => {
           .send({ password: testRoomPassword })
           .expect(200);
       }
+
+      // 방이 실제로 꽉 찼는지 확인
+      const roomResponse = await request(app.getHttpServer())
+        .get(`/rooms/${testRoomId}`)
+        .set(getAuthHeaders(creatorToken))
+        .expect(200);
+
+      expect(roomResponse.body.currentParticipants).toBe(
+        testRoomMaxParticipants,
+      );
+      expect(roomResponse.body.participants).toHaveLength(
+        testRoomMaxParticipants,
+      );
 
       // 꽉 찬 방에 참가 시도
       const response = await request(app.getHttpServer())
@@ -281,6 +302,49 @@ describe('Room API (e2e)', () => {
         .expect(400);
 
       expectErrorResponse(response, 400, ROOM_ERRORS.PASSWORD_REQUIRED);
+    });
+  });
+
+  describe('방 참가 시 방 삭제와의 동시성 문제', () => {
+    it('방 삭제 중 방 참가 시도 - 실패 (ROOM_JOIN_CONFLICT)', async () => {
+      // 1. 방 생성
+      const createResponse = await request(app.getHttpServer())
+        .post('/rooms')
+        .set(getAuthHeaders(creatorToken))
+        .send({
+          name: testRoomName,
+          password: testRoomPassword,
+          maxParticipants: testRoomMaxParticipants,
+        })
+        .expect(201);
+
+      const roomId = createResponse.body.room.id;
+
+      // 1. 방 삭제 요청을 시작하지만 완료는 기다리지 않음
+      const deletePromise = request(app.getHttpServer())
+        .delete(`/rooms/${roomId}`)
+        .set(getAuthHeaders(creatorToken))
+        .then((res) => res)
+        .catch((err) => err.response);
+
+      // 2. 방 삭제 요청이 트랜잭션을 시작할 시간을 주기 위해 아주 짧게 대기 (1ms)
+      await new Promise((resolve) => setTimeout(resolve, 1));
+
+      // 3. 방 참가 요청 전송
+      const joinResponse = await request(app.getHttpServer())
+        .post(`/rooms/${roomId}/join`)
+        .set(getAuthHeaders(participantToken))
+        .send({ password: testRoomPassword })
+        .then((res) => res)
+        .catch((err) => err.response);
+
+      // 4. 방 삭제 요청 완료 대기
+      const deleteResponse = await deletePromise;
+
+      // 5. 검증
+      expect(deleteResponse.status).toBe(204);
+      expect(joinResponse.status).toBe(409);
+      expect(joinResponse.body.message).toBe(ROOM_ERRORS.ROOM_JOIN_CONFLICT);
     });
   });
 
@@ -357,6 +421,43 @@ describe('Room API (e2e)', () => {
         .post(`/rooms/${testRoomId}/leave`)
         .set(getAuthHeaders(participantToken))
         .expect(204);
+    });
+    it('멱등성 검증 - 방 나가기 (다중 호출)', async () => {
+      // 1. 방 나가기 요청
+      await request(app.getHttpServer())
+        .post(`/rooms/${testRoomId}/leave`)
+        .set(getAuthHeaders(participantToken))
+        .expect(204);
+
+      // 2. 이미 나간 사용자가 다시 나가기 요청 (멱등성 보장)
+      await request(app.getHttpServer())
+        .post(`/rooms/${testRoomId}/leave`)
+        .set(getAuthHeaders(participantToken))
+        .expect(204);
+
+      // 방 정보 조회
+      const roomResponse = await request(app.getHttpServer())
+        .get(`/rooms/${testRoomId}`)
+        .set(getAuthHeaders(creatorToken))
+        .expect(200);
+
+      const roomId = roomResponse.body.id;
+      expect(roomId).toBeDefined();
+
+      // 4. 방장 닉네임 확인 (creatorNickname 필드 사용)
+      const creator = await userRepository.findOne({
+        where: { createdRoom: { id: testRoomId } },
+        relations: { createdRoom: true },
+      });
+
+      expect(creator.nickname).toBe(creatorInfo.nickname);
+
+      // 5. 참여자 수가 1명(방장만)으로 줄어들었는지 확인
+      expect(roomResponse.body.currentParticipants).toBe(1);
+      expect(roomResponse.body.participants).toHaveLength(1);
+      expect(roomResponse.body.participants[0].nickname).toBe(
+        creatorInfo.nickname,
+      );
     });
   });
 
@@ -472,14 +573,39 @@ describe('Room API (e2e)', () => {
       );
     });
 
-    it('자신에게 위임 시도 - 실패', async () => {
-      await request(app.getHttpServer())
+    it('자신에게 위임 시도 - 실패 (검증 강화)', async () => {
+      // 1. 정상적인 방장 위임
+      const transferResponse = await request(app.getHttpServer())
         .patch(`/rooms/${testRoomId}/transfer-creator`)
         .set(getAuthHeaders(creatorToken))
         .send({ newCreatorId: participantUserId })
         .expect(200);
 
-      // 위임 성공 후, 새로운 방장이 자신에게 다시 위임 시도
+      // 2. 위임이 성공했는지 확인
+      expect(transferResponse.body.message).toBe(
+        ROOM_MESSAGES.CREATOR_TRANSFERRED,
+      );
+      expect(transferResponse.body.room.participants).toContainEqual(
+        expect.objectContaining({
+          id: participantUserId,
+          role: ParticipantRole.PLAYER,
+        }),
+      );
+
+      // 3. 새로운 방장 확인
+      const roomResponse = await request(app.getHttpServer())
+        .get(`/rooms/${testRoomId}`)
+        .set(getAuthHeaders(participantToken))
+        .expect(200);
+
+      // 방장이 변경되었는지 확인 (creatorId가 participantUserId와 일치하는지)
+      // (참고: 실제 API 응답 구조에 따라 이 부분을 조정해야 함)
+      const newCreator = roomResponse.body.participants.find(
+        (p) => p.role === ParticipantRole.PLAYER && p.id === participantUserId,
+      );
+      expect(newCreator).toBeDefined();
+
+      // 4. 새로운 방장이 자신에게 다시 위임 시도
       const newResponse = await request(app.getHttpServer())
         .patch(`/rooms/${testRoomId}/transfer-creator`)
         .set(getAuthHeaders(participantToken))
@@ -556,6 +682,58 @@ describe('Room API (e2e)', () => {
           role: ParticipantRole.GM,
         }),
       );
+    });
+
+    it('정상적인 역할 변경 (GM -> PLAYER) - 성공', async () => {
+      // 1. 먼저 PLAYER를 GM으로 변경
+      await request(app.getHttpServer())
+        .patch(`/rooms/${testRoomId}/participants/${participantUserId}/role`)
+        .set(getAuthHeaders(creatorToken))
+        .send({ role: ParticipantRole.GM })
+        .expect(200);
+
+      // 2. GM을 다시 PLAYER로 변경
+      const response = await request(app.getHttpServer())
+        .patch(`/rooms/${testRoomId}/participants/${participantUserId}/role`)
+        .set(getAuthHeaders(creatorToken))
+        .send({ role: ParticipantRole.PLAYER })
+        .expect(200);
+
+      expect(response.body.message).toBe(ROOM_MESSAGES.ROLE_UPDATED);
+      expect(response.body.room.participants).toContainEqual(
+        expect.objectContaining({
+          id: participantUserId,
+          role: ParticipantRole.PLAYER,
+        }),
+      );
+    });
+
+    it('다양한 유효하지 않은 역할 값으로 변경 시도 - 실패', async () => {
+      const invalidRoleCases = [
+        { role: null, expectedMessage: ROOM_ERRORS.INVALID_PARTICIPANT_ROLE },
+        {
+          role: undefined,
+          expectedMessage: ROOM_ERRORS.INVALID_PARTICIPANT_ROLE,
+        },
+        {
+          role: 'INVALID',
+          expectedMessage: ROOM_ERRORS.INVALID_PARTICIPANT_ROLE,
+        },
+        { role: '', expectedMessage: ROOM_ERRORS.INVALID_PARTICIPANT_ROLE },
+        { role: 123, expectedMessage: ROOM_ERRORS.INVALID_PARTICIPANT_ROLE },
+        { role: [], expectedMessage: ROOM_ERRORS.INVALID_PARTICIPANT_ROLE },
+        { role: {}, expectedMessage: ROOM_ERRORS.INVALID_PARTICIPANT_ROLE },
+      ];
+
+      for (const testCase of invalidRoleCases) {
+        const response = await request(app.getHttpServer())
+          .patch(`/rooms/${testRoomId}/participants/${participantUserId}/role`)
+          .set(getAuthHeaders(creatorToken))
+          .send({ role: testCase.role })
+          .expect(400);
+
+        expect(response.body.message).toContain(testCase.expectedMessage);
+      }
     });
 
     it('방장이 아닌 사용자가 역할 변경 시도 - 실패', async () => {

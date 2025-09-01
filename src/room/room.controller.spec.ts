@@ -36,6 +36,7 @@ describe('RoomController', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     isDeleted: false,
+    creatorNickname: 'ddd',
     participants: [
       {
         id: 1,

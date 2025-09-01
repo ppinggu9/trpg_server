@@ -160,6 +160,7 @@ export class RoomValidatorService {
     userId: number,
     password: string,
   ): Promise<void> {
+    // 이 시점에서 room은 활성화된 방임이 보장됨
     await this.validateSingleRoomParticipation(userId);
     await this.validateRoomPassword(room, password);
     await this.validateRoomCapacity(room);
