@@ -8,8 +8,10 @@ import { UpdateUserNicknameRequest } from '../dto/update-user-nickname.dto';
 
 export const createUserDto = (): CreateUserDto => ({
   name: faker.person.fullName(),
-  nickname: faker.person.firstName(),
-  email: faker.internet.email(),
+  // username()으로 변경 + 고유 식별자 강화
+  nickname: `${faker.internet.username()}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+  // 고유 이메일 생성
+  email: `${Date.now()}_${Math.random().toString(36).substring(2, 8)}@${faker.internet.domainName()}`,
   password: faker.internet.password({ length: 20 }),
 });
 

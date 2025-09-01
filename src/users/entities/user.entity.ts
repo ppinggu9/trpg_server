@@ -33,7 +33,7 @@ export class User {
   @Column({ unique: true, length: 255 })
   email: string;
 
-  @Column({ name: 'password_hash', select: false })
+  @Column({ name: 'password_hash' })
   passwordHash: string;
 
   @ApiProperty({ enum: UserRole, default: UserRole.USER })

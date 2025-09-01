@@ -23,7 +23,7 @@ export class Room {
   @Column({ length: 50, nullable: false })
   name: string;
 
-  @Column({ nullable: false, select: false })
+  @Column({ nullable: false })
   password: string;
 
   @ApiProperty({ description: '최대 참여자 수', default: 2 })

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { createNestJSDatasource } from './data-source';
+import { addTransactionalDataSource } from 'typeorm-transactional';
 
 @Module({
   imports: [
@@ -17,10 +18,17 @@ import { createNestJSDatasource } from './data-source';
           logging: true,
         };
       },
+      async dataSourceFactory(options) {
+        if (!options) {
+          throw new Error('Invalid options passed');
+        }
+        return addTransactionalDataSource(new DataSource(options));
+      },
     }),
   ],
 })
 export class DbModule implements OnApplicationBootstrap {
   constructor(private dataSource: DataSource) {}
+
   async onApplicationBootstrap() {}
 }

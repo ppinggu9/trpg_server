@@ -16,10 +16,17 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { UpdateUserNicknameRequest } from './dto/update-user-nickname.dto';
+import { RoomParticipantService } from '@/room/room-participant.service';
+import { createMock } from '@golevelup/ts-jest';
+
+jest.mock('typeorm-transactional', () => ({
+  Transactional: () => () => ({}),
+}));
 
 describe('UsersService', () => {
   let service: UsersService;
   let repository: Repository<User>;
+  let roomParticipantService: RoomParticipantService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -29,11 +36,18 @@ describe('UsersService', () => {
           provide: getRepositoryToken(User),
           useClass: Repository, // Mock TypeORM repository
         },
+        {
+          provide: RoomParticipantService,
+          useValue: createMock<RoomParticipantService>(),
+        },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
     repository = module.get<Repository<User>>(getRepositoryToken(User));
+    roomParticipantService = module.get<RoomParticipantService>(
+      RoomParticipantService,
+    );
   });
 
   afterEach(() => {
@@ -247,6 +261,9 @@ describe('UsersService', () => {
         affected: 1,
         generatedMaps: [],
       });
+      jest
+        .spyOn(roomParticipantService, 'leaveAllRoomsByUserId')
+        .mockResolvedValue({ affected: 1, raw: [] });
 
       const result = await service.softDeleteUser(mockUser.id);
 
@@ -267,11 +284,27 @@ describe('UsersService', () => {
       const mockUser = createUserEntity();
 
       jest.spyOn(service, 'getUserById').mockResolvedValue(mockUser);
+      jest
+        .spyOn(roomParticipantService, 'leaveAllRoomsByUserId')
+        .mockResolvedValue({ affected: 1, raw: [] });
       jest.spyOn(repository, 'softDelete').mockResolvedValue({
         raw: [],
         affected: 0,
         generatedMaps: [],
       });
+
+      expect(service.softDeleteUser(mockUser.id)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
+
+    it('유저를 제거할 때 해당 유저의 방 나가기가 실패했을 때 에러에 의해 삭제가 실패됩니다.', async () => {
+      const mockUser = createUserEntity();
+
+      jest.spyOn(service, 'getUserById').mockResolvedValue(mockUser);
+      jest
+        .spyOn(roomParticipantService, 'leaveAllRoomsByUserId')
+        .mockRejectedValue(new InternalServerErrorException('삭제 실패'));
 
       expect(service.softDeleteUser(mockUser.id)).rejects.toThrow(
         InternalServerErrorException,

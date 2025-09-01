@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DeleteResult, Repository } from 'typeorm';
+import { DeleteResult, IsNull, Repository } from 'typeorm';
 import { Room } from './entities/room.entity';
 import { User } from '@/users/entities/user.entity';
 import { RoomParticipant } from './entities/room-participant.entity';
@@ -30,7 +30,7 @@ export class RoomParticipantService {
       where: {
         room: { id: room.id },
         user: { id: user.id },
-        leftAt: null,
+        leftAt: IsNull(),
       },
     });
 

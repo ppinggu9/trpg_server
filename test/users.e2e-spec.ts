@@ -224,7 +224,7 @@ describe('User - /users (e2e)', () => {
 
       expect(response.body).toEqual({
         error: 'Bad Request',
-        message: ['Nickname should not be empty'],
+        message: ['nickname should not be empty'],
         statusCode: 400,
       });
     });
@@ -265,7 +265,7 @@ describe('User - /users (e2e)', () => {
 
       expect(response.body).toEqual({
         error: 'Bad Request',
-        message: ['Password should not be empty'],
+        message: ['password should not be empty'],
         statusCode: 400,
       });
     });

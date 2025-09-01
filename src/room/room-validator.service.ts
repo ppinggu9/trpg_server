@@ -2,8 +2,9 @@ import {
   Injectable,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Room } from './entities/room.entity';
 import { RoomParticipant } from './entities/room-participant.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -99,11 +100,11 @@ export class RoomValidatorService {
     const activeCount = await this.roomParticipantRepository.count({
       where: {
         user: { id: userId },
-        leftAt: null,
+        leftAt: IsNull(),
       },
     });
     if (activeCount > 0) {
-      throw new BadRequestException({
+      throw new ConflictException({
         message: ROOM_ERRORS.ALREADY_IN_ROOM,
         details: { userId },
       });
@@ -138,7 +139,7 @@ export class RoomValidatorService {
   // 인원 수 제한 검증
   async validateRoomCapacity(room: Room): Promise<void> {
     const activeCount = await this.roomParticipantRepository.count({
-      where: { room: { id: room.id }, leftAt: null },
+      where: { room: { id: room.id }, leftAt: IsNull() },
     });
 
     if (activeCount >= room.maxParticipants) {

@@ -9,6 +9,11 @@ export const ROOM_MESSAGES = {
 } as const;
 
 export const ROOM_ERRORS = {
+  PASSWORD_REQUIRED: '비밀번호를 입력해주세요.',
+  INVALID_ROOM_NAME: '방 이름은 1자 이상이어야 합니다.',
+  INVALID_ROOM_NAME_LENGTH: '방 이름은 50자를 초과할 수 없습니다.',
+  INVALID_MAX_PARTICIPANTS_MIN: '최대 참여자 수는 2 이상이어야 합니다.',
+  INVALID_MAX_PARTICIPANTS_MAX: '최대 참여자 수는 8 이하여야 합니다.',
   NOT_FOUND: '방을 찾을 수 없습니다.',
   NOT_ROOM_CREATOR: '방장만이 이 작업을 수행할 수 있습니다.',
   CANNOT_LEAVE_AS_CREATOR:
@@ -26,7 +31,6 @@ export const ROOM_ERRORS = {
 
   // validate
   CANNOT_TRANSFER_TO_SELF: '자신에게 방장 권한을 위임할 수 없습니다.',
-  PASSWORD_REQUIRED: '비밀번호를 입력해주세요.',
   ROOM_FULL: '방이 꽉 찼습니다.',
   INVALID_PARTICIPANT_ROLE: '유효하지 않은 참여자 역할입니다.',
 } as const;

@@ -252,31 +252,6 @@ describe('AuthController (e2e)', () => {
     });
   });
 
-  describe('Role Guard', () => {
-    const userDto = createUserDto();
-    beforeAll(async () => {
-      await userRepository.save({
-        name: userDto.name,
-        nickname: userDto.nickname,
-        email: userDto.email,
-        passwordHash: bcrypt.hashSync(userDto.password, 10),
-      });
-
-      const response = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: userDto.email,
-          password: userDto.password,
-        } satisfies LoginUserDto);
-
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('access_token');
-      expect(response.body).toHaveProperty('refresh_token');
-
-      await new Promise((resolve) => setTimeout(resolve, 1001));
-    });
-  });
-
   describe('POST /auth/logout', () => {
     let userDto: ReturnType<typeof createUserDto>;
     let loginResponse: request.Response;

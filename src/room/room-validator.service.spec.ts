@@ -5,7 +5,11 @@ import { Repository } from 'typeorm';
 import { RoomParticipant } from './entities/room-participant.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { createMock } from '@golevelup/ts-jest';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Room } from './entities/room.entity';
 import { User } from '@/users/entities/user.entity';
 import * as bcrypt from 'bcryptjs';
@@ -388,12 +392,12 @@ describe('방 검증 서비스', () => {
       ).resolves.not.toThrow();
     });
 
-    it('사용자가 이미 방에 있을 때 BadRequestException이 발생해야 함', async () => {
+    it('사용자가 이미 방에 있을 때 ConflictException이 발생해야 함', async () => {
       jest.spyOn(roomParticipantRepository, 'count').mockResolvedValue(1);
 
       await expect(
         validatorService.validateRoomCreation(userId),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ConflictException);
       await expect(
         validatorService.validateRoomCreation(userId),
       ).rejects.toThrow(ROOM_ERRORS.ALREADY_IN_ROOM);

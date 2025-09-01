@@ -119,7 +119,7 @@ export class RoomController {
     description: '방을 찾을 수 없음',
   })
   async joinRoom(
-    @Param('roomId') roomId: string,
+    @Param('roomId', ParseUUIDPipe) roomId: string,
     @Body() joinRoomDto: JoinRoomDto,
     @Req() req,
   ): Promise<RoomOperationResponseDto> {
@@ -143,7 +143,10 @@ export class RoomController {
   @ApiUnauthorizedResponse({
     description: '인증되지 않은 사용자',
   })
-  async leaveRoom(@Param('roomId') roomId: string, @Req() req): Promise<void> {
+  async leaveRoom(
+    @Param('roomId', ParseUUIDPipe) roomId: string,
+    @Req() req,
+  ): Promise<void> {
     const userId = req.user.id;
     await this.roomService.leaveRoom(userId, roomId);
   }
@@ -164,7 +167,10 @@ export class RoomController {
   @ApiForbiddenResponse({
     description: '방장이 아님',
   })
-  async deleteRoom(@Param('roomId') roomId: string, @Req() req): Promise<void> {
+  async deleteRoom(
+    @Param('roomId', ParseUUIDPipe) roomId: string,
+    @Req() req,
+  ): Promise<void> {
     const userId = req.user.id;
     await this.roomService.deleteRoom(roomId, userId);
   }
@@ -202,7 +208,7 @@ export class RoomController {
     description: '방장이 아님',
   })
   async transferCreator(
-    @Param('roomId') roomId: string,
+    @Param('roomId', ParseUUIDPipe) roomId: string,
     @Body() dto: TransferCreatorDto,
     @Req() req,
   ): Promise<RoomOperationResponseDto> {
@@ -244,7 +250,7 @@ export class RoomController {
     description: '방장이 아님',
   })
   async updateParticipantRole(
-    @Param('roomId') roomId: string,
+    @Param('roomId', ParseUUIDPipe) roomId: string,
     @Param('userId', ParseIntPipe) userId: number,
     @Body() dto: UpdateParticipantRoleDto,
     @Req() req,

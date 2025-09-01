@@ -8,6 +8,7 @@ import {
   MaxLength,
   IsOptional,
 } from 'class-validator';
+import { ROOM_ERRORS } from '../constants/room.constants';
 
 export class CreateRoomDto {
   @ApiProperty({
@@ -15,8 +16,8 @@ export class CreateRoomDto {
     example: '고블린 사냥',
   })
   @IsString()
-  @MinLength(1)
-  @MaxLength(50)
+  @MinLength(1, { message: ROOM_ERRORS.INVALID_ROOM_NAME })
+  @MaxLength(50, { message: ROOM_ERRORS.INVALID_ROOM_NAME_LENGTH })
   name: string;
 
   @ApiProperty({
@@ -24,6 +25,7 @@ export class CreateRoomDto {
     example: '123',
   })
   @IsString()
+  @MinLength(1, { message: ROOM_ERRORS.PASSWORD_REQUIRED })
   password: string;
 
   @ApiProperty({
@@ -33,8 +35,8 @@ export class CreateRoomDto {
     maximum: 8,
   })
   @IsInt()
-  @Min(2)
-  @Max(8)
+  @Min(2, { message: ROOM_ERRORS.INVALID_MAX_PARTICIPANTS_MIN })
+  @Max(8, { message: ROOM_ERRORS.INVALID_MAX_PARTICIPANTS_MAX })
   @IsOptional()
   maxParticipants?: number = 2;
 }

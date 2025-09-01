@@ -4,7 +4,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
-import { runSeeders } from 'typeorm-extension';
 import { addTransactionalDataSource } from 'typeorm-transactional';
 
 config({ path: '.env.test' });
@@ -34,9 +33,5 @@ const TestE2EDatabaseModule = TypeOrmModule.forRootAsync({
 export class TestDbModule implements OnApplicationBootstrap {
   constructor(private dataSource: DataSource) {}
 
-  async onApplicationBootstrap() {
-    if (process.env.NODE_ENV === 'test') {
-      await runSeeders(this.dataSource);
-    }
-  }
+  async onApplicationBootstrap() {}
 }
