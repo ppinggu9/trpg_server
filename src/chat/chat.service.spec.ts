@@ -9,6 +9,7 @@ import { CreateChatRoomDto } from './dto/create-chat-room.dto';
 import { CreateChatMessagesDto } from './dto/create-chat-messages.dto';
 import { UsersService } from '@/users/users.service';
 import { CHAT_ERRORS } from './constant/chat.constant';
+import { ForbiddenException } from '@nestjs/common';
 
 jest.mock('typeorm-transactional', () => ({
   Transactional: () => () => ({}),
@@ -300,6 +301,84 @@ describe('ChatService', () => {
       // Act & Assert
       await expect(
         service.createMessages(requesterUserId, createMessagesDto),
+      ).rejects.toThrow(CHAT_ERRORS.INVALID_PARTICIPANT);
+    });
+  });
+
+  describe('isUserParticipant', () => {
+    it('should return true if user is an active participant', async () => {
+      // Arrange
+      const userId = 101;
+      const roomId = 1;
+      const mockParticipant = {
+        id: 1,
+        user: { id: userId },
+        chatRoom: { id: roomId },
+      };
+      (chatParticipantRepository.findOne as jest.Mock).mockResolvedValue(
+        mockParticipant,
+      );
+
+      // Act
+      const result = await service.isUserParticipant(userId, roomId);
+
+      // Assert
+      expect(result).toBe(true);
+      expect(chatParticipantRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          user: { id: userId },
+          chatRoom: { id: roomId },
+        },
+      });
+    });
+
+    it('should return false if user is not a participant', async () => {
+      // Arrange
+      const userId = 999;
+      const roomId = 1;
+      (chatParticipantRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      // Act
+      const result = await service.isUserParticipant(userId, roomId);
+
+      // Assert
+      expect(result).toBe(false);
+      expect(chatParticipantRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          user: { id: userId },
+          chatRoom: { id: roomId },
+        },
+      });
+    });
+  });
+
+  describe('checkUserCanAccessRoom', () => {
+    it('should not throw if user is an active participant', async () => {
+      // Arrange
+      const userId = 101;
+      const roomId = 1;
+      // `isUserParticipant`가 true를 반환하도록 모킹
+      jest.spyOn(service, 'isUserParticipant').mockResolvedValue(true);
+
+      // Act & Assert
+      await expect(
+        service.checkUserCanAccessRoom(userId, roomId),
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw ForbiddenException if user is not an active participant', async () => {
+      // Arrange
+      const userId = 999;
+      const roomId = 1;
+      // `isUserParticipant`가 false를 반환하도록 모킹
+      jest.spyOn(service, 'isUserParticipant').mockResolvedValue(false);
+
+      // Act & Assert
+      await expect(
+        service.checkUserCanAccessRoom(userId, roomId),
+      ).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.checkUserCanAccessRoom(userId, roomId),
       ).rejects.toThrow(CHAT_ERRORS.INVALID_PARTICIPANT);
     });
   });

@@ -286,4 +286,21 @@ export class ChatService {
       chatRoom: { id: roomId },
     });
   }
+
+  async isUserParticipant(userId: number, roomId: number): Promise<boolean> {
+    const participant = await this.chatParticipantRepository.findOne({
+      where: {
+        user: { id: userId },
+        chatRoom: { id: roomId },
+      },
+    });
+    return !!participant;
+  }
+
+  async checkUserCanAccessRoom(userId: number, roomId: number): Promise<void> {
+    const canAccess = await this.isUserParticipant(userId, roomId);
+    if (!canAccess) {
+      throw new ForbiddenException(CHAT_ERRORS.INVALID_PARTICIPANT);
+    }
+  }
 }

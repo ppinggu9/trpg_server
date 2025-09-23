@@ -9,6 +9,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { RefreshTokenRepository } from './refresh-token.repository';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { WsAuthMiddleware } from './ws-auth.middleware';
 
 @Module({
   imports: [
@@ -27,8 +28,13 @@ import { RefreshToken } from './entities/refresh-token.entity';
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy, RefreshTokenRepository],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    RefreshTokenRepository,
+    WsAuthMiddleware,
+  ],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, WsAuthMiddleware],
 })
 export class AuthModule {}

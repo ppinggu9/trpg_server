@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
@@ -14,11 +13,9 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 async function bootstrap() {
   initializeTransactionalContext({ storageDriver: StorageDriver.AUTO });
   const app = await NestFactory.create(AppModule);
-
   app.useWebSocketAdapter(new IoAdapter(app));
 
   const configService = app.get(ConfigService);
-
   if (configService.get<boolean>('DATABASE_MIGRATIONS_RUN')) {
     const dataSource = app.get(DataSource);
     await dataSource.runMigrations({ transaction: 'all' });
@@ -29,13 +26,14 @@ async function bootstrap() {
     'FRONTEND_ORIGIN',
     'http://localhost:3000',
   );
+
   app.enableCors({
     origin: frontEndOrigin,
-    // methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Set-Cookie'],
     exposedHeaders: ['Set-Cookie'],
   });
+
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
@@ -51,7 +49,6 @@ async function bootstrap() {
     .addTag('Trpg_Sever-API')
     .addBearerAuth()
     .build();
-
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, documentFactory);
 
