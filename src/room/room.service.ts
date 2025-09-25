@@ -20,6 +20,7 @@ import { RoomParticipantService } from './room-participant.service';
 import { RoomValidatorService } from './room-validator.service';
 import { ParticipantRole } from '@/common/enums/participant-role.enum';
 import { ROOM_ERRORS, ROOM_MESSAGES } from './constants/room.constants';
+import { RoomParticipantDto } from './dto/room-participant.dto';
 
 @Injectable()
 export class RoomService {
@@ -336,7 +337,6 @@ export class RoomService {
       .leftJoinAndSelect('room.participants', 'participants')
       .leftJoinAndSelect('participants.user', 'user')
       .leftJoinAndSelect('room.creator', 'creator')
-      .andWhere('room.deletedAt IS NULL')
       .getOne();
 
     if (!room) {
@@ -347,5 +347,9 @@ export class RoomService {
       });
     }
     return room;
+  }
+
+  async getParticipantsOnly(roomId: string): Promise<RoomParticipantDto[]> {
+    return this.roomParticipantService.getActiveParticipants(roomId);
   }
 }

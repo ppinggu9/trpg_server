@@ -42,6 +42,7 @@ export const createParticipantEntity = (
   participant.joinedAt = overrides.joinedAt ?? new Date();
   participant.leftAt = overrides.leftAt ?? null;
   participant.role = overrides.role ?? ParticipantRole.PLAYER;
+  participant.characterSheet = overrides.characterSheet ?? undefined;
 
   return participant;
 };

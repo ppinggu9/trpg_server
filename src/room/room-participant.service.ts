@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DeleteResult, IsNull, Repository } from 'typeorm';
+import { DeleteResult, Repository } from 'typeorm';
 import { Room } from './entities/room.entity';
 import { User } from '@/users/entities/user.entity';
 import { RoomParticipant } from './entities/room-participant.entity';
@@ -30,7 +30,6 @@ export class RoomParticipantService {
       where: {
         room: { id: room.id },
         user: { id: user.id },
-        leftAt: IsNull(),
       },
     });
 
@@ -120,7 +119,7 @@ export class RoomParticipantService {
   // 참여자수 확인
   async getActiveParticipantsCount(roomId: string): Promise<number> {
     return this.roomParticipantRepository.count({
-      where: { room: { id: roomId }, leftAt: null },
+      where: { room: { id: roomId } },
     });
   }
 
@@ -158,5 +157,24 @@ export class RoomParticipantService {
 
     participant.role = newRole;
     await this.roomParticipantRepository.save(participant);
+  }
+
+  // 밑에 2개는 charactersheet에서 권한여부를 위해 사용
+  async getParticipantById(
+    participantId: number,
+  ): Promise<RoomParticipant | null> {
+    return this.roomParticipantRepository
+      .createQueryBuilder('participant')
+      .leftJoinAndSelect('participant.user', 'user')
+      .where('participant.id = :id', { id: participantId })
+      .getOne();
+  }
+  async getParticipantByUserId(
+    userId: number,
+  ): Promise<RoomParticipant | null> {
+    return this.roomParticipantRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user', 'room'],
+    });
   }
 }
