@@ -14,6 +14,7 @@ import { UserRole } from './user-role.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { Room } from '@/room/entities/room.entity';
 import { RoomParticipant } from '@/room/entities/room-participant.entity';
+import { ChatParticipant } from '@/chat/entities/chat-participant.entity';
 
 @Entity('users')
 export class User {
@@ -72,4 +73,7 @@ export class User {
   @ManyToOne(() => Room)
   @JoinColumn({ name: 'current_room_id' })
   currentRoom: Room | null;
+
+  @OneToMany(() => ChatParticipant, (participant) => participant.user)
+  chatParticipants: ChatParticipant[];
 }

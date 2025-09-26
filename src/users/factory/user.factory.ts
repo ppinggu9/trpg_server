@@ -38,5 +38,6 @@ export const createUserEntity = (options: Partial<User> = {}): User => {
   user.deletedAt = options.deletedAt ?? null;
   user.createdRoom = options.createdRoom ?? undefined; // 기본 Room 생성 순환참조 조심
   user.currentRoom = options.currentRoom ?? undefined; // 기본 Room 생성
+  user.chatParticipants = options.chatParticipants ?? undefined;
   return user;
 };
