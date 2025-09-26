@@ -1,10 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { RoomParticipantDto } from './room-participant.dto';
 import { Room } from '../entities/room.entity';
+import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 
 export class RoomResponseDto {
   @ApiProperty({ description: '방 ID' })
   id: string;
+
+  @ApiProperty({ description: '선택된 TRPG 시스템' })
+  system: TrpgSystem;
 
   @ApiProperty({ description: '방 이름' })
   name: string;
@@ -46,6 +50,7 @@ export class RoomResponseDto {
 
     return {
       id: room.id,
+      system: room.system,
       name: room.name,
       maxParticipants: room.maxParticipants,
       currentParticipants: participantsData.length,

@@ -20,6 +20,7 @@ import { RoomParticipantService } from './room-participant.service';
 import { RoomValidatorService } from './room-validator.service';
 import { ParticipantRole } from '@/common/enums/participant-role.enum';
 import { ROOM_ERRORS, ROOM_MESSAGES } from './constants/room.constants';
+import { RoomParticipantDto } from './dto/room-participant.dto';
 
 @Injectable()
 export class RoomService {
@@ -52,6 +53,7 @@ export class RoomService {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     const room = this.roomRepository.create({
+      system: dto.system,
       name: dto.name,
       password: hashedPassword,
       maxParticipants: dto.maxParticipants,
@@ -336,7 +338,6 @@ export class RoomService {
       .leftJoinAndSelect('room.participants', 'participants')
       .leftJoinAndSelect('participants.user', 'user')
       .leftJoinAndSelect('room.creator', 'creator')
-      .andWhere('room.deletedAt IS NULL')
       .getOne();
 
     if (!room) {
@@ -347,5 +348,19 @@ export class RoomService {
       });
     }
     return room;
+  }
+
+  async getParticipantsOnly(roomId: string): Promise<RoomParticipantDto[]> {
+    const roomExists = await this.roomRepository.exist({
+      where: { id: roomId },
+    });
+
+    if (!roomExists) {
+      throw new NotFoundException({
+        message: ROOM_ERRORS.NOT_FOUND,
+        details: { roomId },
+      });
+    }
+    return this.roomParticipantService.getActiveParticipants(roomId);
   }
 }

@@ -5,12 +5,13 @@ import {
   DeleteDateColumn,
   ManyToOne,
   Column,
+  OneToOne,
 } from 'typeorm';
 import { Room } from './room.entity';
 import { User } from '@/users/entities/user.entity';
 import { ApiProperty } from '@nestjs/swagger';
-
 import { ParticipantRole } from '@/common/enums/participant-role.enum';
+import { CharacterSheet } from '@/character-sheet/entities/character-sheet.entity';
 
 @Entity()
 export class RoomParticipant {
@@ -42,4 +43,11 @@ export class RoomParticipant {
   @ApiProperty({ description: '참여 종료 시간 (null이면 활성)' })
   @DeleteDateColumn()
   leftAt: Date | null;
+
+  @OneToOne(
+    () => CharacterSheet,
+    (characterSheet) => characterSheet.participant,
+    {},
+  )
+  characterSheet: CharacterSheet;
 }

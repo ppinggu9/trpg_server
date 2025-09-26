@@ -5,12 +5,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { RoomParticipant } from '../entities/room-participant.entity';
 import { createUserEntity } from '@/users/factory/user.factory';
 import { ParticipantRole } from '@/common/enums/participant-role.enum';
+import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 
 export const createRoomEntity = (options: Partial<Room> = {}): Room => {
   const room = new Room();
 
   // 기본값 설정
   room.id = options.id ?? uuidv4();
+  room.system =
+    options.system ?? faker.helpers.arrayElement(Object.values(TrpgSystem));
   room.name =
     options.name ?? `${faker.lorem.words(2).substring(0, 45)}_${Date.now()}`;
   room.password =
@@ -42,6 +45,7 @@ export const createParticipantEntity = (
   participant.joinedAt = overrides.joinedAt ?? new Date();
   participant.leftAt = overrides.leftAt ?? null;
   participant.role = overrides.role ?? ParticipantRole.PLAYER;
+  participant.characterSheet = overrides.characterSheet ?? undefined;
 
   return participant;
 };

@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { RoomModule } from './room/room.module';
 import { ChatModule } from './chat/chat.module';
+import { CharacterSheetModule } from './character-sheet/character-sheet.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ChatModule } from './chat/chat.module';
     AuthModule,
     RoomModule,
     ChatModule,
+    CharacterSheetModule,
   ],
   controllers: [AppController],
   providers: [AppService],

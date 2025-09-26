@@ -38,6 +38,7 @@ import { UpdateParticipantRoleDto } from './dto/updateparticipantrole.dto';
 import { RoomOperationResponseDto } from './dto/room-operation-response.dto';
 import { RoomResponseDto } from './dto/room-response.dto';
 import { ROOM_MESSAGES } from './constants/room.constants';
+import { RoomParticipantDto } from './dto/room-participant.dto';
 
 @UseGuards(JwtAuthGuard)
 @ApiTags('rooms')
@@ -262,6 +263,21 @@ export class RoomController {
       userId,
       dto.role,
     );
+  }
+  @Get(':roomId/participants')
+  @ApiOperation({
+    summary: '참여자 목록만 조회',
+    description: '해당 방의 참여자 목록만 반환합니다. (방 정보 제외)',
+  })
+  @ApiParam({ name: 'roomId', description: '방 ID', type: 'string' })
+  @ApiOkResponse({
+    description: '참여자 목록 조회 성공',
+    type: [RoomParticipantDto],
+  })
+  async getParticipantsOnly(
+    @Param('roomId', ParseUUIDPipe) roomId: string,
+  ): Promise<RoomParticipantDto[]> {
+    return this.roomService.getParticipantsOnly(roomId);
   }
 
   @Get(':roomId')

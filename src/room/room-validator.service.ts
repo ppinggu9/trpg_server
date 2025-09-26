@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
-import { IsNull, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Room } from './entities/room.entity';
 import { RoomParticipant } from './entities/room-participant.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -100,7 +100,6 @@ export class RoomValidatorService {
     const activeCount = await this.roomParticipantRepository.count({
       where: {
         user: { id: userId },
-        leftAt: IsNull(),
       },
     });
     if (activeCount > 0) {
@@ -139,7 +138,7 @@ export class RoomValidatorService {
   // 인원 수 제한 검증
   async validateRoomCapacity(room: Room): Promise<void> {
     const activeCount = await this.roomParticipantRepository.count({
-      where: { room: { id: room.id }, leftAt: IsNull() },
+      where: { room: { id: room.id } },
     });
 
     if (activeCount >= room.maxParticipants) {
