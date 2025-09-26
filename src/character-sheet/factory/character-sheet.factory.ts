@@ -1,6 +1,5 @@
 import { faker } from '@faker-js/faker';
 import { CharacterSheet } from '../entities/character-sheet.entity';
-import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 import { CreateCharacterSheetDto } from '../dto/create-character-sheet.dto';
 import { UpdateCharacterSheetDto } from '../dto/update-character-sheet.dto';
 import { createParticipantEntity } from '@/room/factory/room.factory';
@@ -9,8 +8,6 @@ export const createCharacterSheetDto = (
   options: Partial<CreateCharacterSheetDto> = {},
 ): CreateCharacterSheetDto => {
   return {
-    trpgType:
-      options.trpgType ?? faker.helpers.arrayElement(Object.values(TrpgSystem)),
     data: options.data ?? {
       name: faker.person.fullName(),
       level: faker.number.int({ min: 1, max: 20 }),
@@ -42,10 +39,8 @@ export const createCharacterSheet = (
   options: Partial<CharacterSheet> = {},
 ): CharacterSheet => {
   const sheet = new CharacterSheet();
-
+  // Trpg는 room에서 생성되므로 room.service을 통해 생성된 값을 받아야한다.
   sheet.id = options.id ?? faker.number.int({ min: 1, max: 10000 });
-  sheet.trpgType =
-    options.trpgType ?? faker.helpers.arrayElement(Object.values(TrpgSystem));
   sheet.data = options.data ?? {
     name: faker.person.fullName(),
     level: faker.number.int({ min: 1, max: 20 }),

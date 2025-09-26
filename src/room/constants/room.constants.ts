@@ -9,6 +9,7 @@ export const ROOM_MESSAGES = {
 } as const;
 
 export const ROOM_ERRORS = {
+  INVALID_TRPG_SYSTEM: '지원하지 않는 TRPG 시스템입니다.',
   PASSWORD_REQUIRED: '비밀번호를 입력해주세요.',
   INVALID_ROOM_NAME: '방 이름은 1자 이상이어야 합니다.',
   INVALID_ROOM_NAME_LENGTH: '방 이름은 50자를 초과할 수 없습니다.',

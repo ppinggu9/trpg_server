@@ -53,6 +53,7 @@ export class RoomService {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     const room = this.roomRepository.create({
+      system: dto.system,
       name: dto.name,
       password: hashedPassword,
       maxParticipants: dto.maxParticipants,
@@ -350,6 +351,16 @@ export class RoomService {
   }
 
   async getParticipantsOnly(roomId: string): Promise<RoomParticipantDto[]> {
+    const roomExists = await this.roomRepository.exist({
+      where: { id: roomId },
+    });
+
+    if (!roomExists) {
+      throw new NotFoundException({
+        message: ROOM_ERRORS.NOT_FOUND,
+        details: { roomId },
+      });
+    }
     return this.roomParticipantService.getActiveParticipants(roomId);
   }
 }

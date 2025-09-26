@@ -166,6 +166,7 @@ export class RoomParticipantService {
     return this.roomParticipantRepository
       .createQueryBuilder('participant')
       .leftJoinAndSelect('participant.user', 'user')
+      .leftJoinAndSelect('participant.room', 'room')
       .where('participant.id = :id', { id: participantId })
       .getOne();
   }

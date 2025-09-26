@@ -14,6 +14,7 @@ import { createUserDto } from '@/users/factory/user.factory';
 import { User } from '@/users/entities/user.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { TestingModule } from '@nestjs/testing';
+import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 
 describe('Room API (e2e)', () => {
   let app: INestApplication;
@@ -60,6 +61,7 @@ describe('Room API (e2e)', () => {
 
   describe('POST /rooms - 방 생성', () => {
     const validRoomData = {
+      system: TrpgSystem.DND5E,
       name: testRoomName,
       password: testRoomPassword,
       maxParticipants: testRoomMaxParticipants,
@@ -74,6 +76,7 @@ describe('Room API (e2e)', () => {
 
       expect(response.body.message).toBe(ROOM_MESSAGES.CREATED);
       expect(response.body.room).toBeDefined();
+      expect(response.body.room.system).toBe(TrpgSystem.DND5E);
       expect(response.body.room.name).toBe(validRoomData.name);
       expect(response.body.room.maxParticipants).toBe(
         validRoomData.maxParticipants,
@@ -180,6 +183,7 @@ describe('Room API (e2e)', () => {
         .post('/rooms')
         .set(getAuthHeaders(creatorToken))
         .send({
+          system: TrpgSystem.DND5E,
           name: testRoomName,
           password: testRoomPassword,
           maxParticipants: testRoomMaxParticipants,
@@ -355,6 +359,7 @@ describe('Room API (e2e)', () => {
         .post('/rooms')
         .set(getAuthHeaders(creatorToken))
         .send({
+          system: TrpgSystem.DND5E,
           name: testRoomName,
           password: testRoomPassword,
           maxParticipants: testRoomMaxParticipants,
@@ -468,6 +473,7 @@ describe('Room API (e2e)', () => {
         .post('/rooms')
         .set(getAuthHeaders(creatorToken))
         .send({
+          system: TrpgSystem.DND5E,
           name: testRoomName,
           password: testRoomPassword,
           maxParticipants: testRoomMaxParticipants,
@@ -539,6 +545,7 @@ describe('Room API (e2e)', () => {
         .post('/rooms')
         .set(getAuthHeaders(creatorToken))
         .send({
+          system: TrpgSystem.DND5E,
           name: testRoomName,
           password: testRoomPassword,
           maxParticipants: testRoomMaxParticipants,
@@ -650,6 +657,7 @@ describe('Room API (e2e)', () => {
         .post('/rooms')
         .set(getAuthHeaders(creatorToken))
         .send({
+          system: TrpgSystem.DND5E,
           name: testRoomName,
           password: testRoomPassword,
           maxParticipants: testRoomMaxParticipants,
@@ -777,6 +785,7 @@ describe('Room API (e2e)', () => {
         .post('/rooms')
         .set(getAuthHeaders(creatorToken))
         .send({
+          system: TrpgSystem.DND5E,
           name: testRoomName,
           password: testRoomPassword,
           maxParticipants: testRoomMaxParticipants,
@@ -801,6 +810,7 @@ describe('Room API (e2e)', () => {
 
       expect(response.body).toMatchObject({
         id: testRoomId,
+        system: TrpgSystem.DND5E,
         name: testRoomName,
         maxParticipants: testRoomMaxParticipants,
         currentParticipants: 2,
@@ -839,6 +849,82 @@ describe('Room API (e2e)', () => {
     it('인증되지 않은 사용자가 방 정보 조회 - 실패', async () => {
       const response = await request(app.getHttpServer())
         .get(`/rooms/${testRoomId}`)
+        .expect(401);
+
+      expectErrorResponse(response, 401, 'Unauthorized');
+    });
+  });
+
+  describe('GET /rooms/:roomId/participants - 참여자 목록 조회', () => {
+    let roomId: string;
+
+    beforeEach(async () => {
+      // 방 생성
+      const createResponse = await request(app.getHttpServer())
+        .post('/rooms')
+        .set(getAuthHeaders(creatorToken))
+        .send({
+          system: TrpgSystem.DND5E,
+          name: '참여자 테스트 방',
+          password: '123',
+          maxParticipants: 4,
+        })
+        .expect(201);
+
+      roomId = createResponse.body.room.id;
+
+      // 참가자 추가
+      await request(app.getHttpServer())
+        .post(`/rooms/${roomId}/join`)
+        .set(getAuthHeaders(participantToken))
+        .send({ password: '123' })
+        .expect(200);
+    });
+
+    it('정상적인 참여자 목록 조회 - 성공', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/rooms/${roomId}/participants`)
+        .set(getAuthHeaders(creatorToken))
+        .expect(200);
+
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(2);
+      expect(response.body[0]).toMatchObject({
+        id: expect.any(Number),
+        nickname: expect.any(String),
+        role: ParticipantRole.PLAYER,
+      });
+      expect(response.body[1]).toMatchObject({
+        id: expect.any(Number),
+        nickname: expect.any(String),
+        role: ParticipantRole.PLAYER,
+      });
+    });
+
+    it('존재하지 않는 방 ID로 조회 시도 - 실패', async () => {
+      const nonExistentRoomId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+      const response = await request(app.getHttpServer())
+        .get(`/rooms/${nonExistentRoomId}/participants`)
+        .set(getAuthHeaders(creatorToken))
+        .expect(404);
+
+      expectErrorResponse(response, 404, ROOM_ERRORS.NOT_FOUND);
+    });
+
+    it('유효하지 않은 방 ID 형식으로 조회 시도 - 실패', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/rooms/invalid-uuid/participants')
+        .set(getAuthHeaders(creatorToken))
+        .expect(400);
+
+      expect(response.body.message).toContain(
+        'Validation failed (uuid is expected)',
+      );
+    });
+
+    it('인증되지 않은 사용자가 조회 시도 - 실패', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/rooms/${roomId}/participants`)
         .expect(401);
 
       expectErrorResponse(response, 401, 'Unauthorized');

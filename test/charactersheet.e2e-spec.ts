@@ -82,6 +82,7 @@ describe('CharacterSheetController (e2e)', () => {
 
     // 1. GM이 방 생성 → 방장은 PLAYER로 참여됨
     const createRoomDto = {
+      system: TrpgSystem.DND5E,
       name: 'Test Room',
       password: 'test1234',
       maxParticipants: 5,
@@ -132,7 +133,6 @@ describe('CharacterSheetController (e2e)', () => {
   describe('UC-01: 캐릭터 시트 생성', () => {
     it('성공: 플레이어가 자신의 시트를 성공적으로 생성해야 한다', async () => {
       const createDto = createCharacterSheetDto({
-        trpgType: TrpgSystem.DND5E,
         data: { name: 'Legolas', level: 5, hp: 45 },
         isPublic: false,
       });
@@ -144,7 +144,7 @@ describe('CharacterSheetController (e2e)', () => {
         .expect(201);
 
       expect(response.body).toHaveProperty('id');
-      expect(response.body.trpgType).toBe(TrpgSystem.DND5E);
+      expect(response.body.trpgType).toBe(testRoom.system);
       expect(response.body.data).toEqual(createDto.data);
       expect(response.body.isPublic).toBe(false);
       expect(response.body.participantId).toBe(playerParticipant.id);
@@ -152,7 +152,6 @@ describe('CharacterSheetController (e2e)', () => {
 
     it('성공: GM이 자신의 시트를 생성하고 isPublic을 true로 설정할 수 있어야 한다', async () => {
       const createDto = createCharacterSheetDto({
-        trpgType: TrpgSystem.COC7E,
         data: { name: 'Sherlock Holmes', sanity: 70 },
         isPublic: true, // GM은 공개 설정 가능
       });
@@ -163,12 +162,12 @@ describe('CharacterSheetController (e2e)', () => {
         .send(createDto)
         .expect(201);
 
+      expect(response.body.trpgType).toBe(testRoom.system);
       expect(response.body.isPublic).toBe(true);
     });
 
     it('성공: GM도 isPublic을 false로 설정할 수 있어야 한다', async () => {
       const createDto = createCharacterSheetDto({
-        trpgType: TrpgSystem.COC7E,
         data: { name: 'Secret NPC' },
         isPublic: false,
       });
@@ -179,6 +178,7 @@ describe('CharacterSheetController (e2e)', () => {
         .send(createDto)
         .expect(201);
 
+      expect(response.body.trpgType).toBe(testRoom.system);
       expect(response.body.isPublic).toBe(false);
     });
   });
@@ -348,7 +348,6 @@ describe('CharacterSheetController (e2e)', () => {
 
     it('실패: 이미 존재하는 시트에 대해 생성 요청 시 409 에러를 반환해야 한다', async () => {
       const createDto = createCharacterSheetDto({
-        trpgType: TrpgSystem.DND5E,
         data: { name: 'New Attempt' },
         isPublic: false,
       });

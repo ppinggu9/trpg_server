@@ -12,12 +12,25 @@ import {
 } from 'typeorm';
 import { RoomParticipant } from './room-participant.entity';
 import { User } from '@/users/entities/user.entity';
+import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 
 @Entity()
 export class Room {
   @ApiProperty({ description: '공개 방 코드 (UUID, PK)' })
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @ApiProperty({
+    description: '선택된 TRPG 시스템',
+    enum: TrpgSystem,
+    default: TrpgSystem.DND5E,
+  })
+  @Column({
+    type: 'enum',
+    enum: TrpgSystem,
+    default: TrpgSystem.DND5E,
+  })
+  system: TrpgSystem;
 
   @ApiProperty({ description: '방 이름' })
   @Column({ length: 50, nullable: false })

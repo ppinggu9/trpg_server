@@ -51,7 +51,7 @@ export class CharacterSheetService {
 
     const newSheet = this.characterSheetRepository.create({
       data: createDto.data,
-      trpgType: createDto.trpgType,
+      trpgType: participant.room.system,
       isPublic: createDto.isPublic,
       participant,
     });

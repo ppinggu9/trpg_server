@@ -7,10 +7,22 @@ import {
   MinLength,
   MaxLength,
   IsOptional,
+  IsEnum,
 } from 'class-validator';
 import { ROOM_ERRORS } from '../constants/room.constants';
+import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 
 export class CreateRoomDto {
+  @ApiProperty({
+    description: 'TRPG 시스템 선택',
+    enum: TrpgSystem,
+    default: TrpgSystem.DND5E,
+  })
+  @IsEnum(TrpgSystem, {
+    message: ROOM_ERRORS.INVALID_TRPG_SYSTEM,
+  })
+  system?: TrpgSystem = TrpgSystem.DND5E;
+
   @ApiProperty({
     description: '방 이름 (1~50자)',
     example: '고블린 사냥',
