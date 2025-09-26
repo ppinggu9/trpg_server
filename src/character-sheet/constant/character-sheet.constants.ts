@@ -13,4 +13,5 @@ export const CHARACTER_SHEET_ERRORS = {
   NO_READ_PERMISSION: '이 캐릭터 시트를 볼 권한이 없습니다.',
   NO_WRITE_PERMISSION: '이 캐릭터 시트를 수정할 권한이 없습니다.',
   PUBLIC_UPDATE_RESTRICTED: '시트 공개 여부는 GM만 변경할 수 있습니다.',
+  OWNERSHIP_REQUIRED: '타인의 캐릭터 시트는 생성할 수 없습니다.',
 } as const;

@@ -46,7 +46,7 @@ export class CharacterSheetService {
 
     // 일치여부 확인
     if (participant.user.id !== requesterUserId) {
-      throw new ForbiddenException('타인의 캐릭터 시트는 생성할 수 없습니다.');
+      throw new ForbiddenException(CHARACTER_SHEET_ERRORS.OWNERSHIP_REQUIRED);
     }
 
     const newSheet = this.characterSheetRepository.create({

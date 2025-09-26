@@ -39,7 +39,7 @@ export const createCharacterSheet = (
   options: Partial<CharacterSheet> = {},
 ): CharacterSheet => {
   const sheet = new CharacterSheet();
-  // Trpg는 room에서 생성되므로 room.service을 통해 생성된 값을 받아야한다.
+  // Trpgsystem은 room에서 생성되므로 room.service을 통해 생성된 값을 받아야한다.
   sheet.id = options.id ?? faker.number.int({ min: 1, max: 10000 });
   sheet.data = options.data ?? {
     name: faker.person.fullName(),
