@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { RoomModule } from './room/room.module';
 import { ChatModule } from './chat/chat.module';
 import { CharacterSheetModule } from './character-sheet/character-sheet.module';
+import { NpcModule } from './npc/npc.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { CharacterSheetModule } from './character-sheet/character-sheet.module';
     RoomModule,
     ChatModule,
     CharacterSheetModule,
+    NpcModule,
   ],
   controllers: [AppController],
   providers: [AppService],

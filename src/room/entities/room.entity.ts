@@ -13,6 +13,7 @@ import {
 import { RoomParticipant } from './room-participant.entity';
 import { User } from '@/users/entities/user.entity';
 import { TrpgSystem } from '@/common/enums/trpg-system.enum';
+import { Npc } from '@/npc/entities/npc.entity';
 
 @Entity()
 export class Room {
@@ -66,4 +67,7 @@ export class Room {
     onDelete: 'SET NULL',
   })
   creator: User | null;
+
+  @OneToMany(() => Npc, (npc) => npc.room)
+  npcs: Npc[];
 }

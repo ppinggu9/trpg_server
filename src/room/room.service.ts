@@ -363,4 +363,16 @@ export class RoomService {
     }
     return this.roomParticipantService.getActiveParticipants(roomId);
   }
+
+  // NPC에서 room조회에 사용
+  async getRoomById(roomId: string): Promise<Room> {
+    const room = await this.roomRepository.findOne({
+      where: { id: roomId },
+      relations: { creator: true },
+    });
+    if (!room) {
+      throw new NotFoundException(ROOM_ERRORS.NOT_FOUND);
+    }
+    return room;
+  }
 }

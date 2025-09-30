@@ -178,4 +178,17 @@ export class RoomParticipantService {
       relations: ['user', 'room'],
     });
   }
+
+  async getParticipantByUserIdAndRoomId(
+    userId: number,
+    roomId: string,
+  ): Promise<RoomParticipant | null> {
+    return this.roomParticipantRepository.findOne({
+      where: {
+        user: { id: userId },
+        room: { id: roomId },
+      },
+      relations: ['user', 'room'],
+    });
+  }
 }

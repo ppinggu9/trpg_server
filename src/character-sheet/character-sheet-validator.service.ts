@@ -12,8 +12,8 @@ import { CHARACTER_SHEET_ERRORS } from './constant/character-sheet.constants';
 export class CharacterSheetValidatorService {
   constructor(
     @InjectRepository(CharacterSheet)
-    private characterSheetRepository: Repository<CharacterSheet>,
-    private roomParticipantService: RoomParticipantService,
+    private readonly characterSheetRepository: Repository<CharacterSheet>,
+    private readonly roomParticipantService: RoomParticipantService,
   ) {}
 
   async validateReadAccess(

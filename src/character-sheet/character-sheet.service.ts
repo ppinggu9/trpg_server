@@ -17,9 +17,9 @@ import { CharacterSheetValidatorService } from './character-sheet-validator.serv
 export class CharacterSheetService {
   constructor(
     @InjectRepository(CharacterSheet)
-    private characterSheetRepository: Repository<CharacterSheet>,
-    private roomParticipantService: RoomParticipantService,
-    private validatorService: CharacterSheetValidatorService,
+    private readonly characterSheetRepository: Repository<CharacterSheet>,
+    private readonly roomParticipantService: RoomParticipantService,
+    private readonly validatorService: CharacterSheetValidatorService,
   ) {}
 
   async createCharacterSheet(

@@ -1,26 +1,26 @@
-// src/charactersheet/entities/character-sheet.entity.ts
+// src/npc/entities/npc.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  OneToOne,
+  ManyToOne,
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  DeleteDateColumn,
 } from 'typeorm';
-import { RoomParticipant } from '@/room/entities/room-participant.entity';
+import { Room } from '@/room/entities/room.entity';
 import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 import { ApiProperty } from '@nestjs/swagger';
-@Entity('character_sheets')
-export class CharacterSheet {
-  @ApiProperty({ example: 1, description: '캐릭터 시트 고유 ID' })
+
+@Entity('npcs')
+export class Npc {
+  @ApiProperty({ example: 1, description: 'NPC 고유 ID' })
   @PrimaryGeneratedColumn()
   id: number;
 
   @ApiProperty({
     type: Object,
-    description: 'TRPG 시트 데이터 (프론트엔드에서 계산된 모든 값 포함)',
+    description: 'TRPG NPC/몬스터 데이터 (프론트엔드에서 계산된 모든 값 포함)',
   })
   @Column('jsonb')
   data: object;
@@ -42,9 +42,9 @@ export class CharacterSheet {
   @Column({ default: false })
   isPublic: boolean;
 
-  @OneToOne(() => RoomParticipant, { nullable: true })
-  @JoinColumn()
-  participant: RoomParticipant | null;
+  @ManyToOne(() => Room, (room) => room.npcs, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'room_id' })
+  room: Room;
 
   @ApiProperty({ description: '생성 시간' })
   @CreateDateColumn({ name: 'created_at' })
@@ -53,8 +53,4 @@ export class CharacterSheet {
   @ApiProperty({ description: '수정 시간' })
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
-
-  @ApiProperty({ description: '삭제 시간 (null이면 활성)' })
-  @DeleteDateColumn()
-  deletedAt: Date | null;
 }
