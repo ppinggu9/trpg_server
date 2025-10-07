@@ -80,7 +80,6 @@ describe('CharacterSheetController (e2e)', () => {
       email: otherPlayerUserInfo.email,
     });
 
-    // 1. GM이 방 생성 → 방장은 PLAYER로 참여됨
     const createRoomDto = {
       system: TrpgSystem.DND5E,
       name: 'Test Room',
@@ -89,13 +88,11 @@ describe('CharacterSheetController (e2e)', () => {
     };
     await roomService.createRoom(createRoomDto, gmUser.id);
 
-    // 2. 방 정보 로드
     testRoom = await roomRepository.findOne({
       where: { name: 'Test Room' },
       relations: ['creator', 'participants', 'participants.user'],
     });
 
-    // 3. 방장(GM)의 역할을 GM으로 업데이트
     await roomService.updateParticipantRole(
       testRoom.id,
       gmUser.id, // currentUserId (권한 있는 사용자: 방장 자신)
@@ -103,7 +100,6 @@ describe('CharacterSheetController (e2e)', () => {
       ParticipantRole.GM,
     );
 
-    // 4. 플레이어들 참여
     await roomService.joinRoom(testRoom.id, playerUser.id, {
       password: 'test1234',
     });
@@ -111,13 +107,11 @@ describe('CharacterSheetController (e2e)', () => {
       password: 'test1234',
     });
 
-    // 5. 최종 방 상태 로드
     testRoom = await roomRepository.findOne({
       where: { id: testRoom.id },
       relations: ['creator', 'participants', 'participants.user'],
     });
 
-    // 6. 각 participant 할당
     playerParticipant = testRoom.participants.find(
       (p) => p.user.id === playerUser.id,
     );
@@ -153,7 +147,7 @@ describe('CharacterSheetController (e2e)', () => {
     it('성공: GM이 자신의 시트를 생성하고 isPublic을 true로 설정할 수 있어야 한다', async () => {
       const createDto = createCharacterSheetDto({
         data: { name: 'Sherlock Holmes', sanity: 70 },
-        isPublic: true, // GM은 공개 설정 가능
+        isPublic: true,
       });
 
       const response = await request(app.getHttpServer())
@@ -262,7 +256,7 @@ describe('CharacterSheetController (e2e)', () => {
 
     it('성공: GM은 다른 플레이어의 시트 데이터를 업데이트할 수 있어야 한다', async () => {
       const updateDto = updateCharacterSheetDto({
-        data: { ...createdSheet.data, level: 10 }, // 레벨을 10으로 변경
+        data: { ...createdSheet.data, level: 10 },
       });
 
       const response = await request(app.getHttpServer())
@@ -294,7 +288,6 @@ describe('CharacterSheetController (e2e)', () => {
         participant: { id: playerParticipant.id },
       });
 
-      // 2. 공개 시트 새로 생성
       const initialData = { name: 'Legolas' };
       await characterSheetRepository.save(
         createCharacterSheet({
@@ -305,7 +298,6 @@ describe('CharacterSheetController (e2e)', () => {
         }),
       );
 
-      // 3. GM이 isPublic만 false로 변경
       const updateDto = updateCharacterSheetDto({
         data: initialData,
         isPublic: false,
@@ -335,7 +327,6 @@ describe('CharacterSheetController (e2e)', () => {
 
   describe('EC-02: 이미 존재하는 시트에 대한 생성 시도', () => {
     beforeEach(async () => {
-      // 사전에 시트를 생성해 둡니다.
       await characterSheetRepository.save(
         createCharacterSheet({
           participant: playerParticipant,
@@ -364,7 +355,6 @@ describe('CharacterSheetController (e2e)', () => {
     let privateSheet: CharacterSheet;
 
     beforeEach(async () => {
-      // 플레이어가 비공개 시트를 생성
       privateSheet = await characterSheetRepository.save(
         createCharacterSheet({
           participant: playerParticipant,

@@ -1,6 +1,7 @@
 // src/npc/dto/create-npc.dto.ts
-import { IsObject, IsBoolean } from 'class-validator';
+import { IsObject, IsBoolean, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { NpcType } from '@/common/enums/npc-type.enum';
 
 export class CreateNpcDto {
   @ApiProperty({
@@ -16,4 +17,12 @@ export class CreateNpcDto {
   })
   @IsBoolean()
   isPublic: boolean;
+
+  @IsEnum(NpcType)
+  @ApiProperty({
+    enum: NpcType,
+    description: 'npc또는 monster로 필터링(선택)',
+    default: NpcType.NPC,
+  })
+  type: NpcType = NpcType.NPC;
 }

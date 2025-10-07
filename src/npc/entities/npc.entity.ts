@@ -11,12 +11,25 @@ import {
 import { Room } from '@/room/entities/room.entity';
 import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 import { ApiProperty } from '@nestjs/swagger';
+import { NpcType } from '@/common/enums/npc-type.enum';
 
 @Entity('npcs')
 export class Npc {
   @ApiProperty({ example: 1, description: 'NPC 고유 ID' })
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ApiProperty({
+    enum: NpcType,
+    description: 'NPC 또는 몬스터 타입',
+    default: NpcType.NPC,
+  })
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: NpcType.NPC,
+  })
+  type: NpcType;
 
   @ApiProperty({
     type: Object,
@@ -42,9 +55,12 @@ export class Npc {
   @Column({ default: false })
   isPublic: boolean;
 
-  @ManyToOne(() => Room, (room) => room.npcs, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Room)
   @JoinColumn({ name: 'room_id' })
   room: Room;
+
+  @Column({ name: 'room_id', type: 'uuid' })
+  roomId: string;
 
   @ApiProperty({ description: '생성 시간' })
   @CreateDateColumn({ name: 'created_at' })

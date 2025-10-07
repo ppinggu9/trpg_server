@@ -2,6 +2,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 import { Npc } from '../entities/npc.entity';
+import { NpcType } from '@/common/enums/npc-type.enum';
 
 export class NpcResponseDto {
   @ApiProperty({ example: 1, description: 'NPC 고유 ID' })
@@ -18,6 +19,9 @@ export class NpcResponseDto {
     description: '룰북 타입',
   })
   trpgType: TrpgSystem;
+
+  @ApiProperty({ enum: NpcType, description: 'NPC 또는 몬스터 타입' })
+  type: NpcType;
 
   @ApiProperty({
     example: false,
@@ -39,8 +43,9 @@ export class NpcResponseDto {
       id: entity.id,
       data: entity.data,
       trpgType: entity.trpgType,
+      type: entity.type,
       isPublic: entity.isPublic,
-      roomId: entity.room.id,
+      roomId: entity.roomId,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     };

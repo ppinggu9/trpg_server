@@ -12,6 +12,7 @@ import {
   ParseIntPipe,
   ParseUUIDPipe,
   Query,
+  ParseEnumPipe,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import {
@@ -31,36 +32,36 @@ import { NpcService } from './npc.service';
 import { CreateNpcDto } from './dto/create-npc.dto';
 import { NpcResponseDto } from './dto/response-npc.dto';
 import { UpdateNpcDto } from './dto/update-npc.dto';
+import { NpcType } from '@/common/enums/npc-type.enum';
 
 @ApiTags('NPCs')
-@Controller('npcs')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@Controller('npcs')
 export class NpcController {
   constructor(private readonly npcService: NpcService) {}
 
   @Post('room/:roomId')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'NPC/몬스터 생성 (GM 전용)' })
-  @ApiParam({ name: 'roomId', description: '방 ID' })
+  @ApiOperation({ summary: 'NPC 생성 (GM 전용)' })
+  @ApiParam({ name: 'roomId', type: 'string' })
   @ApiBody({ type: CreateNpcDto })
   @ApiResponse({ status: 201, type: NpcResponseDto })
   @ApiForbiddenResponse({ description: 'GM이 아님' })
   @ApiNotFoundResponse({ description: '방 없음' })
   async create(
     @Param('roomId', ParseUUIDPipe) roomId: string,
-    @Body() createDto: CreateNpcDto,
+    @Body() dto: CreateNpcDto,
     @Req() req: RequestWithUser,
   ) {
-    const npc = await this.npcService.createNpc(roomId, createDto, req.user.id);
+    const npc = await this.npcService.createNpc(roomId, dto, req.user.id);
     return NpcResponseDto.fromEntity(npc);
   }
 
   @Get(':npcId')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'NPC 조회 (GM 또는 isPublic=true인 경우)' })
-  @ApiParam({ name: 'npcId', description: 'NPC ID' })
+  @ApiOperation({ summary: 'NPC 조회' })
+  @ApiParam({ name: 'npcId', type: 'number' })
   @ApiResponse({ status: 200, type: NpcResponseDto })
-  @ApiForbiddenResponse({ description: '접근 권한 없음' })
+  @ApiForbiddenResponse({ description: '권한 없음' })
   @ApiNotFoundResponse({ description: 'NPC 없음' })
   async findOne(
     @Param('npcId', ParseIntPipe) npcId: number,
@@ -71,29 +72,26 @@ export class NpcController {
   }
 
   @Patch(':npcId')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'NPC 업데이트 (GM 전용)' })
-  @ApiParam({ name: 'npcId', description: 'NPC ID' })
+  @ApiParam({ name: 'npcId', type: 'number' })
   @ApiBody({ type: UpdateNpcDto })
   @ApiResponse({ status: 200, type: NpcResponseDto })
   @ApiForbiddenResponse({ description: 'GM이 아님' })
   @ApiNotFoundResponse({ description: 'NPC 없음' })
   async update(
     @Param('npcId', ParseIntPipe) npcId: number,
-    @Body() updateDto: UpdateNpcDto,
+    @Body() dto: UpdateNpcDto,
     @Req() req: RequestWithUser,
   ) {
-    const npc = await this.npcService.updateNpc(npcId, updateDto, req.user.id);
+    const npc = await this.npcService.updateNpc(npcId, dto, req.user.id);
     return NpcResponseDto.fromEntity(npc);
   }
 
   @Delete(':npcId')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'NPC 삭제 (GM 전용)' })
-  @ApiParam({ name: 'npcId', description: 'NPC ID' })
+  @ApiParam({ name: 'npcId', type: 'number' })
   @ApiResponse({
     status: 200,
-    description: '삭제 성공',
     schema: { type: 'object', properties: { success: { type: 'boolean' } } },
   })
   @ApiForbiddenResponse({ description: 'GM이 아님' })
@@ -107,15 +105,17 @@ export class NpcController {
 
   @Get()
   @ApiOperation({ summary: '방별 NPC 목록 조회' })
-  @ApiQuery({ name: 'roomId', description: '방 ID', required: true })
+  @ApiQuery({ name: 'roomId', required: true, type: String })
   @ApiOkResponse({ type: [NpcResponseDto] })
-  @ApiForbiddenResponse({ description: '방에 참여하지 않음 또는 권한 없음' })
-  @ApiNotFoundResponse({ description: '방을 찾을 수 없음' })
+  @ApiForbiddenResponse({ description: '방에 참여하지 않음' })
+  @ApiNotFoundResponse({ description: '방 없음' })
   async getNpcsByRoom(
-    @Query('roomId') roomId: string,
+    @Query('roomId', ParseUUIDPipe) roomId: string,
     @Req() req: RequestWithUser,
+    @Query('type', new ParseEnumPipe(NpcType, { optional: true }))
+    type?: NpcType,
   ) {
-    const npcs = await this.npcService.getNpcsByRoom(roomId, req.user.id);
+    const npcs = await this.npcService.getNpcsByRoom(roomId, req.user.id, type);
     return npcs.map(NpcResponseDto.fromEntity);
   }
 }

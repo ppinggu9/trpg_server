@@ -32,12 +32,12 @@ import { CharacterSheetResponseDto } from './dto/character-sheet-response.dto';
 import { RequestWithUser } from '@/auth/types/request-with-user.dto';
 
 @ApiTags('Character Sheets')
-@Controller('character-sheets')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@Controller('character-sheets')
 export class CharacterSheetController {
   constructor(private readonly characterSheetService: CharacterSheetService) {}
 
-  @ApiBearerAuth()
   @Post(':participantId')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -73,7 +73,6 @@ export class CharacterSheetController {
     return CharacterSheetResponseDto.fromEntity(createdSheet);
   }
 
-  @ApiBearerAuth()
   @Get(':participantId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '캐릭터 시트 조회' })
@@ -101,7 +100,6 @@ export class CharacterSheetController {
     return CharacterSheetResponseDto.fromEntity(foundSheet);
   }
 
-  @ApiBearerAuth()
   @Patch(':participantId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
