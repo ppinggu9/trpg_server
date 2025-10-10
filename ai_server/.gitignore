@@ -1,0 +1,44 @@
+# --- Secrets / Env ---
+.env
+.env.*
+!.env.example
+
+# --- Virtual env ---
+venv/
+.venv/
+
+# --- Python caches / build ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Logs ---
+*.log
+logs/
+uvicorn*.log
+
+# --- OS / IDE ---
+.DS_Store
+.vscode/
+.idea/
+
+# --- App data (local only) ---
+chroma/
+sessions/
+cache/
+uploads/
+data/
+models/
+tmp/
+*.sqlite3
+*.db
+sessions

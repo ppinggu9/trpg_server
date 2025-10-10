@@ -10,6 +10,8 @@ import { RoomModule } from './room/room.module';
 import { ChatModule } from './chat/chat.module';
 import { CharacterSheetModule } from './character-sheet/character-sheet.module';
 import { NpcModule } from './npc/npc.module';
+import { HttpModule } from '@nestjs/axios';
+import { S3Module } from './s3/s3.module';
 
 @Module({
   imports: [
@@ -26,6 +28,11 @@ import { NpcModule } from './npc/npc.module';
         DATABASE_DROP_SCHEMA: Joi.boolean().required(),
         DATABASE_LOGGING: Joi.boolean().required(),
         DATABASE_MIGRATIONS_RUN: Joi.boolean().required(),
+        AWS_REGION: Joi.string().required(),
+        AWS_ACCESS_KEY_ID: Joi.string().optional(),
+        AWS_SECRET_ACCESS_KEY: Joi.string().optional(),
+        S3_BUCKET_NAME: Joi.string().required(),
+        CLOUDFRONT_DOMAIN: Joi.string().required(),
       }),
     }),
     UsersModule,
@@ -35,6 +42,8 @@ import { NpcModule } from './npc/npc.module';
     ChatModule,
     CharacterSheetModule,
     NpcModule,
+    HttpModule,
+    S3Module,
   ],
   controllers: [AppController],
   providers: [AppService],
