@@ -14,7 +14,7 @@ export class S3Service {
     const region = this.configService.get<string>('AWS_REGION');
     const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY_ID');
     const secretAccessKey = this.configService.get<string>(
-      'S3_SECRET_ACCESS_KEY',
+      'AWS_SECRET_ACCESS_KEY',
     );
     this.bucketName = this.configService.get<string>('S3_BUCKET_NAME');
     this.cloudFrontDomain = this.configService.get<string>('CLOUDFRONT_DOMAIN');
@@ -34,17 +34,6 @@ export class S3Service {
     });
   }
 
-  // 테스트를 위한 업로드 함수
-  async uploadObject(key: string, body: Buffer | string, contentType?: string) {
-    const command = new PutObjectCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      Body: body,
-      ContentType: contentType,
-    });
-    return this.s3Client.send(command);
-  }
-
   /**
    * 클라이언트가 S3에 직접 업로드할 수 있는 Presigned PUT URL 생성
    * @param key S3 객체 키 (예: "avatars/user123.png")
@@ -56,15 +45,7 @@ export class S3Service {
     contentType: string,
     expiresIn: number = 900,
   ): Promise<string> {
-    if (!key.startsWith('uploads/')) {
-      throw new Error('Invalid key prefix');
-    }
-
-    const allowedExts = ['.jpg', '.png', '.webp'];
-    if (!allowedExts.some((ext) => key.endsWith(ext))) {
-      throw new Error('Invalid file extension');
-    }
-
+    // 호출자가 검증하도록 할것
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: key,
@@ -76,9 +57,18 @@ export class S3Service {
       signableHeaders: new Set(['content-type']),
     });
   }
-  /**
-   * CloudFront 기반 공개 URL 반환 (실제 다운로드용)
-   */
+
+  validateImageExtension(key: string): void {
+    if (!key.startsWith('uploads/')) {
+      throw new Error('Invalid key prefix');
+    }
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    const lowerKey = key.toLowerCase();
+    if (!allowedExts.some((ext) => lowerKey.endsWith(ext))) {
+      throw new Error('Invalid file extension');
+    }
+  }
+
   getCloudFrontUrl(key: string): string {
     if (!this.cloudFrontDomain) {
       throw new Error('CLOUDFRONT_DOMAIN is not configured');
@@ -89,4 +79,15 @@ export class S3Service {
   getBucketName(): string {
     return this.bucketName;
   }
+
+  // // 테스트를 위한 업로드 함수
+  // async uploadObject(key: string, body: Buffer | string, contentType?: string) {
+  //   const command = new PutObjectCommand({
+  //     Bucket: this.bucketName,
+  //     Key: key,
+  //     Body: body,
+  //     ContentType: contentType,
+  //   });
+  //   return this.s3Client.send(command);
+  // }
 }

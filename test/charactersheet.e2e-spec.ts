@@ -119,8 +119,6 @@ describe('CharacterSheetController (e2e)', () => {
     otherPlayerParticipant = testRoom.participants.find(
       (p) => p.user.id === otherPlayerUser.id,
     );
-
-    console.log('TESTROOM:============', testRoom);
   });
   // ========== 유즈 케이스 테스트 ==========
 
@@ -310,6 +308,92 @@ describe('CharacterSheetController (e2e)', () => {
         .expect(200);
 
       expect(response.body.isPublic).toBe(false);
+    });
+
+    describe('UC-04: 캐릭터 시트 이미지 업로드 Presigned URL 발급', () => {
+      // 유틸: 파일 이름에서 정규화된 확장자 추출 (jpeg → jpg)
+      const getNormalizedExt = (fileName: string): string => {
+        const ext = fileName.split('.').pop()?.toLowerCase() || '';
+        return ext === 'jpeg' ? 'jpg' : ext;
+      };
+
+      it('성공: 소유자가 자신의 시트에 대한 Presigned URL을 발급받음', async () => {
+        const fileName = 'avatar.png';
+        const contentType = 'image/png';
+
+        const res = await request(app.getHttpServer())
+          .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
+          .set('Authorization', `Bearer ${playerToken}`)
+          .send({ fileName, contentType })
+          .expect(200);
+
+        const { key, presignedUrl, publicUrl } = res.body;
+
+        // 1. key 형식 검증
+        const normalizedExt = getNormalizedExt(fileName);
+        const keyPattern = new RegExp(
+          `^uploads/characters/${testRoom.id}/${playerParticipant.id}/[a-zA-Z0-9_-]+\\.${normalizedExt}$`,
+        );
+        expect(key).toMatch(keyPattern);
+
+        // 2. URL 검증
+        expect(presignedUrl).toContain(key);
+        expect(presignedUrl).toMatch(
+          /^https:\/\/mock-presigned\.s3\.amazonaws\.com\/.*\?X-Amz-Signature=mock$/,
+        );
+        expect(publicUrl.trim()).toBe(`https://d12345.cloudfront.net/${key}`);
+      });
+
+      it('성공: GM이 다른 플레이어의 시트에 대한 Presigned URL을 발급받음', async () => {
+        const fileName = 'npc.jpg';
+        const contentType = 'image/jpeg';
+
+        const res = await request(app.getHttpServer())
+          .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
+          .set('Authorization', `Bearer ${gmToken}`)
+          .send({ fileName, contentType })
+          .expect(200);
+
+        const key = res.body.key;
+        const normalizedExt = getNormalizedExt(fileName);
+
+        const keyPattern = new RegExp(
+          `^uploads/characters/${testRoom.id}/${playerParticipant.id}/[a-zA-Z0-9_-]+\\.${normalizedExt}$`,
+        );
+        expect(key).toMatch(keyPattern);
+      });
+
+      it('실패: 다른 플레이어가 비공개 시트에 대한 요청 시 403 반환', async () => {
+        await request(app.getHttpServer())
+          .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
+          .set('Authorization', `Bearer ${otherPlayerToken}`)
+          .send({ fileName: 'avatar.png', contentType: 'image/png' })
+          .expect(403);
+      });
+
+      it('실패: 존재하지 않는 participantId → 404', async () => {
+        await request(app.getHttpServer())
+          .post('/character-sheets/999999/presigned-url')
+          .set('Authorization', `Bearer ${playerToken}`)
+          .send({ fileName: 'avatar.png', contentType: 'image/png' })
+          .expect(404);
+      });
+
+      it('실패: 지원하지 않는 MIME 타입 → 400', async () => {
+        await request(app.getHttpServer())
+          .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
+          .set('Authorization', `Bearer ${playerToken}`)
+          .send({ fileName: 'doc.pdf', contentType: 'application/pdf' })
+          .expect(400);
+      });
+
+      it('실패: 확장자와 MIME 타입 불일치 → 400', async () => {
+        await request(app.getHttpServer())
+          .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
+          .set('Authorization', `Bearer ${playerToken}`)
+          .send({ fileName: 'fake.png', contentType: 'image/jpeg' })
+          .expect(400);
+      });
     });
   });
 

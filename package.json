@@ -45,6 +45,7 @@
     "cross-env": "^10.0.0",
     "dotenv": "^16.6.1",
     "joi": "^17.13.3",
+    "nanoid": "^5.1.6",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",

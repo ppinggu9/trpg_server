@@ -12,12 +12,29 @@ import { createUserDto } from '@/users/factory/user.factory';
 import { LoginUserDto } from '@/auth/dto/login-user.dto';
 import { AppModule } from '@/app.module';
 import { TestDbModule } from './test-db.e2e.module';
+import { S3Service } from '@/s3/s3.service';
 
 export interface TestApp {
   app: INestApplication;
   module: TestingModule;
   dataSource: DataSource;
 }
+
+const S3_MOCK = {
+  //contentType: string은 원래 인자로 들어가야한다 + 인자 1개 더 있다.
+  getPresignedPutUrl: jest
+    .fn()
+    .mockImplementation((key: string) =>
+      Promise.resolve(
+        `https://mock-presigned.s3.amazonaws.com/${key}?X-Amz-Signature=mock`,
+      ),
+    ),
+  getCloudFrontUrl: jest
+    .fn()
+    .mockImplementation(
+      (key: string) => `https://d12345.cloudfront.net/${key}`,
+    ),
+};
 
 export async function setupTestApp(): Promise<TestApp> {
   initializeTransactionalContext({ storageDriver: StorageDriver.AUTO });
@@ -26,7 +43,9 @@ export async function setupTestApp(): Promise<TestApp> {
     imports: [AppModule],
   })
     .overrideModule(DbModule)
-    .useModule(TestDbModule);
+    .useModule(TestDbModule)
+    .overrideProvider(S3Service)
+    .useValue(S3_MOCK);
 
   const module: TestingModule = await moduleBuilder.compile();
   const app = module.createNestApplication();

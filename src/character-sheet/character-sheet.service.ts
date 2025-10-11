@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +14,9 @@ import { CreateCharacterSheetDto } from './dto/create-character-sheet.dto';
 import { UpdateCharacterSheetDto } from './dto/update-character-sheet.dto';
 import { CHARACTER_SHEET_ERRORS } from './constant/character-sheet.constants';
 import { CharacterSheetValidatorService } from './character-sheet-validator.service';
+import { S3Service } from '@/s3/s3.service';
+import { nanoid } from 'nanoid';
+
 @Injectable()
 export class CharacterSheetService {
   constructor(
@@ -20,6 +24,7 @@ export class CharacterSheetService {
     private readonly characterSheetRepository: Repository<CharacterSheet>,
     private readonly roomParticipantService: RoomParticipantService,
     private readonly validatorService: CharacterSheetValidatorService,
+    private readonly s3service: S3Service,
   ) {}
 
   async createCharacterSheet(
@@ -97,5 +102,67 @@ export class CharacterSheetService {
 
     sheet.data = updateDto.data;
     return await this.characterSheetRepository.save(sheet);
+  }
+
+  async getPresignedUrlForCharacterSheet(
+    participantId: number,
+    fileName: string,
+    contentType: string,
+    requesterUserId: number,
+  ) {
+    await this.validatorService.validateUploadAccess(
+      participantId,
+      requesterUserId,
+    );
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(contentType)) {
+      throw new BadRequestException(CHARACTER_SHEET_ERRORS.INVALID_MIME_TYPE);
+    }
+
+    const ext = this.getExtension(fileName);
+    const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+    if (!allowedExts.includes(ext)) {
+      throw new BadRequestException(
+        CHARACTER_SHEET_ERRORS.INVALID_FILE_EXTENSION,
+      );
+    }
+
+    // 확장자와 MIME 타입 일치 여부 검증
+    const EXT_TO_MIME = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+    } as const;
+
+    const expectedMime = EXT_TO_MIME[ext as keyof typeof EXT_TO_MIME];
+    if (expectedMime && expectedMime !== contentType) {
+      throw new BadRequestException(
+        CHARACTER_SHEET_ERRORS.MIME_EXTENSION_MISMATCH,
+      );
+    }
+
+    // roomId 가져오기
+    const targetParticipant =
+      await this.roomParticipantService.getParticipantById(participantId);
+    if (!targetParticipant) {
+      throw new NotFoundException(CHARACTER_SHEET_ERRORS.PARTICIPANT_NOT_FOUND);
+    }
+    const roomId = targetParticipant.room.id;
+
+    const normalizedExt = ext === 'jpeg' ? 'jpg' : ext;
+    const key = `uploads/characters/${roomId}/${participantId}/${nanoid()}.${normalizedExt}`;
+
+    const presignedUrl = await this.s3service.getPresignedPutUrl(
+      key,
+      contentType,
+    );
+    const publicUrl = this.s3service.getCloudFrontUrl(key);
+
+    return { presignedUrl, publicUrl, key };
+  }
+  private getExtension(filename: string): string {
+    return filename.split('.').pop()?.toLowerCase() || 'bin';
   }
 }
