@@ -1,6 +1,7 @@
-// create-presigned-url.dto.ts
+// src/common/dto/create-presigned-url.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsIn } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum } from 'class-validator';
+import { ImageMimeType } from '@/common/enums/image-mime-type.enum';
 
 export class CreatePresignedUrlDto {
   @ApiProperty({
@@ -13,12 +14,12 @@ export class CreatePresignedUrlDto {
 
   @ApiProperty({
     example: 'image/png',
-    enum: ['image/jpeg', 'image/png', 'image/webp'],
+    enum: ImageMimeType,
     description: '파일의 MIME 타입',
   })
   @IsNotEmpty()
   @IsString()
-  @IsIn(['image/jpeg', 'image/png', 'image/webp'], {
+  @IsEnum(ImageMimeType, {
     message: '지원하지 않는 파일 형식입니다.',
   })
   contentType: string;

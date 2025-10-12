@@ -21,6 +21,7 @@ import {
 } from '@/character-sheet/factory/character-sheet.factory';
 import { RoomService } from '@/room/room.service';
 import { ParticipantRole } from '@/common/enums/participant-role.enum';
+import { ImageMimeType } from '@/common/enums/image-mime-type.enum';
 
 describe('CharacterSheetController (e2e)', () => {
   let app: INestApplication;
@@ -43,6 +44,27 @@ describe('CharacterSheetController (e2e)', () => {
   let playerParticipant: RoomParticipant;
   let gmParticipant: RoomParticipant;
   let otherPlayerParticipant: RoomParticipant;
+
+  const VALID_IMAGE_CASES = [
+    { fileName: 'avatar.png', contentType: ImageMimeType.PNG },
+    { fileName: 'character.jpg', contentType: ImageMimeType.JPEG },
+    { fileName: 'monster.jpeg', contentType: ImageMimeType.JPEG },
+    { fileName: 'map.webp', contentType: ImageMimeType.WEBP },
+  ] as const;
+
+  const validateKeyFormat = (
+    key: string,
+    fileName: string,
+    roomId: string,
+    participantId: number,
+  ) => {
+    const ext = fileName.split('.').pop()!.toLowerCase();
+    const normalizedExt = ext === 'jpeg' ? 'jpg' : ext;
+    const keyPattern = new RegExp(
+      `^uploads/characters/${roomId}/${participantId}/[a-zA-Z0-9_-]+\\.${normalizedExt}$`,
+    );
+    expect(key).toMatch(keyPattern);
+  };
 
   beforeAll(async () => {
     const testApp = await setupTestApp();
@@ -309,90 +331,60 @@ describe('CharacterSheetController (e2e)', () => {
 
       expect(response.body.isPublic).toBe(false);
     });
+  });
 
-    describe('UC-04: 캐릭터 시트 이미지 업로드 Presigned URL 발급', () => {
-      // 유틸: 파일 이름에서 정규화된 확장자 추출 (jpeg → jpg)
-      const getNormalizedExt = (fileName: string): string => {
-        const ext = fileName.split('.').pop()?.toLowerCase() || '';
-        return ext === 'jpeg' ? 'jpg' : ext;
-      };
+  describe('UC-04: 캐릭터 시트 이미지 업로드 Presigned URL 발급 - 성공 케이스', () => {
+    it('성공: 소유자가 자신의 시트에 대한 Presigned URL을 발급받음', async () => {
+      const { fileName, contentType } = VALID_IMAGE_CASES[0];
 
-      it('성공: 소유자가 자신의 시트에 대한 Presigned URL을 발급받음', async () => {
-        const fileName = 'avatar.png';
-        const contentType = 'image/png';
+      const res = await request(app.getHttpServer())
+        .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ fileName, contentType })
+        .expect(200);
 
+      const { key, presignedUrl, publicUrl } = res.body;
+
+      validateKeyFormat(key, fileName, testRoom.id, playerParticipant.id);
+
+      expect(presignedUrl).toContain(key);
+      expect(presignedUrl).toMatch(
+        /^https:\/\/mock-presigned\.s3\.amazonaws\.com\/.*\?X-Amz-Signature=mock$/,
+      );
+      expect(publicUrl.trim()).toBe(`https://d12345.cloudfront.net/${key}`);
+    });
+
+    it('성공: GM이 다른 플레이어의 시트에 대한 Presigned URL을 발급받음', async () => {
+      const { fileName, contentType } = VALID_IMAGE_CASES[1];
+
+      const res = await request(app.getHttpServer())
+        .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ fileName, contentType })
+        .expect(200);
+
+      validateKeyFormat(
+        res.body.key,
+        fileName,
+        testRoom.id,
+        playerParticipant.id,
+      );
+    });
+
+    VALID_IMAGE_CASES.forEach(({ fileName, contentType }) => {
+      it(`성공: 유효한 이미지 조합 - ${fileName} (${contentType})`, async () => {
         const res = await request(app.getHttpServer())
           .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
           .set('Authorization', `Bearer ${playerToken}`)
           .send({ fileName, contentType })
           .expect(200);
 
-        const { key, presignedUrl, publicUrl } = res.body;
-
-        // 1. key 형식 검증
-        const normalizedExt = getNormalizedExt(fileName);
-        const keyPattern = new RegExp(
-          `^uploads/characters/${testRoom.id}/${playerParticipant.id}/[a-zA-Z0-9_-]+\\.${normalizedExt}$`,
+        validateKeyFormat(
+          res.body.key,
+          fileName,
+          testRoom.id,
+          playerParticipant.id,
         );
-        expect(key).toMatch(keyPattern);
-
-        // 2. URL 검증
-        expect(presignedUrl).toContain(key);
-        expect(presignedUrl).toMatch(
-          /^https:\/\/mock-presigned\.s3\.amazonaws\.com\/.*\?X-Amz-Signature=mock$/,
-        );
-        expect(publicUrl.trim()).toBe(`https://d12345.cloudfront.net/${key}`);
-      });
-
-      it('성공: GM이 다른 플레이어의 시트에 대한 Presigned URL을 발급받음', async () => {
-        const fileName = 'npc.jpg';
-        const contentType = 'image/jpeg';
-
-        const res = await request(app.getHttpServer())
-          .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
-          .set('Authorization', `Bearer ${gmToken}`)
-          .send({ fileName, contentType })
-          .expect(200);
-
-        const key = res.body.key;
-        const normalizedExt = getNormalizedExt(fileName);
-
-        const keyPattern = new RegExp(
-          `^uploads/characters/${testRoom.id}/${playerParticipant.id}/[a-zA-Z0-9_-]+\\.${normalizedExt}$`,
-        );
-        expect(key).toMatch(keyPattern);
-      });
-
-      it('실패: 다른 플레이어가 비공개 시트에 대한 요청 시 403 반환', async () => {
-        await request(app.getHttpServer())
-          .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
-          .set('Authorization', `Bearer ${otherPlayerToken}`)
-          .send({ fileName: 'avatar.png', contentType: 'image/png' })
-          .expect(403);
-      });
-
-      it('실패: 존재하지 않는 participantId → 404', async () => {
-        await request(app.getHttpServer())
-          .post('/character-sheets/999999/presigned-url')
-          .set('Authorization', `Bearer ${playerToken}`)
-          .send({ fileName: 'avatar.png', contentType: 'image/png' })
-          .expect(404);
-      });
-
-      it('실패: 지원하지 않는 MIME 타입 → 400', async () => {
-        await request(app.getHttpServer())
-          .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
-          .set('Authorization', `Bearer ${playerToken}`)
-          .send({ fileName: 'doc.pdf', contentType: 'application/pdf' })
-          .expect(400);
-      });
-
-      it('실패: 확장자와 MIME 타입 불일치 → 400', async () => {
-        await request(app.getHttpServer())
-          .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
-          .set('Authorization', `Bearer ${playerToken}`)
-          .send({ fileName: 'fake.png', contentType: 'image/jpeg' })
-          .expect(400);
       });
     });
   });
@@ -477,7 +469,51 @@ describe('CharacterSheetController (e2e)', () => {
     });
   });
 
-  describe('EC-04: 존재하지 않는 시트에 대한 조회/수정 시도', () => {
+  describe('UC-04: 캐릭터 시트 이미지 업로드 Presigned URL 발급 - 실패 케이스', () => {
+    it('실패: 다른 플레이어가 비공개 시트에 대한 요청 시 403 반환', async () => {
+      const { fileName, contentType } = VALID_IMAGE_CASES[0];
+      await request(app.getHttpServer())
+        .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
+        .set('Authorization', `Bearer ${otherPlayerToken}`)
+        .send({ fileName, contentType })
+        .expect(403);
+    });
+
+    it('실패: 존재하지 않는 participantId → 404', async () => {
+      const { fileName, contentType } = VALID_IMAGE_CASES[0];
+      await request(app.getHttpServer())
+        .post('/character-sheets/999999/presigned-url')
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ fileName, contentType })
+        .expect(404);
+    });
+
+    it('실패: 지원하지 않는 MIME 타입 → 400', async () => {
+      await request(app.getHttpServer())
+        .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ fileName: 'doc.pdf', contentType: 'application/pdf' })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.message).toContain('지원하지 않는 파일 형식입니다.');
+        });
+    });
+
+    it('실패: 확장자와 MIME 타입 불일치 → 400', async () => {
+      await request(app.getHttpServer())
+        .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ fileName: 'fake.png', contentType: ImageMimeType.JPEG })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.message).toContain(
+            '파일 확장자와 MIME 타입이 일치하지 않습니다.',
+          );
+        });
+    });
+  });
+
+  describe('EC-05: 존재하지 않는 시트에 대한 조회/수정 시도', () => {
     it('실패: 존재하지 않는 participantId로 생성 시도 시 404를 반환해야 한다', async () => {
       await request(app.getHttpServer())
         .post('/character-sheets/999999')
@@ -502,7 +538,7 @@ describe('CharacterSheetController (e2e)', () => {
     });
   });
 
-  describe('EC-05: data 필드의 유효성 및 크기 (부분적 테스트)', () => {
+  describe('EC-06: data 필드의 유효성 및 크기 (부분적 테스트)', () => {
     it('실패: data 필드가 객체가 아닐 경우 400 에러를 반환해야 한다', async () => {
       const createDto = {
         trpgType: TrpgSystem.DND5E,
@@ -518,7 +554,7 @@ describe('CharacterSheetController (e2e)', () => {
     });
   });
 
-  describe('EC-06: 타인의 participantId로 시트 생성 시도', () => {
+  describe('EC-07: 타인의 participantId로 시트 생성 시도', () => {
     it('실패: 다른 사용자의 participantId로 시트 생성 시도 시 403 에러를 반환해야 한다', async () => {
       const createDto = createCharacterSheetDto();
 
@@ -530,7 +566,7 @@ describe('CharacterSheetController (e2e)', () => {
     });
   });
 
-  describe('EC-07: isPublic 필드의 불일치', () => {
+  describe('EC-08: isPublic 필드의 불일치', () => {
     let createdSheet: CharacterSheet;
 
     beforeEach(async () => {

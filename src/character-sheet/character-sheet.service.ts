@@ -4,7 +4,6 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -16,6 +15,7 @@ import { CHARACTER_SHEET_ERRORS } from './constant/character-sheet.constants';
 import { CharacterSheetValidatorService } from './character-sheet-validator.service';
 import { S3Service } from '@/s3/s3.service';
 import { nanoid } from 'nanoid';
+import { validateImageUpload } from '@/common/utils/validate-image-upload';
 
 @Injectable()
 export class CharacterSheetService {
@@ -115,35 +115,8 @@ export class CharacterSheetService {
       requesterUserId,
     );
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(contentType)) {
-      throw new BadRequestException(CHARACTER_SHEET_ERRORS.INVALID_MIME_TYPE);
-    }
+    const normalizedExt = validateImageUpload(fileName, contentType);
 
-    const ext = this.getExtension(fileName);
-    const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
-    if (!allowedExts.includes(ext)) {
-      throw new BadRequestException(
-        CHARACTER_SHEET_ERRORS.INVALID_FILE_EXTENSION,
-      );
-    }
-
-    // 확장자와 MIME 타입 일치 여부 검증
-    const EXT_TO_MIME = {
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      png: 'image/png',
-      webp: 'image/webp',
-    } as const;
-
-    const expectedMime = EXT_TO_MIME[ext as keyof typeof EXT_TO_MIME];
-    if (expectedMime && expectedMime !== contentType) {
-      throw new BadRequestException(
-        CHARACTER_SHEET_ERRORS.MIME_EXTENSION_MISMATCH,
-      );
-    }
-
-    // roomId 가져오기
     const targetParticipant =
       await this.roomParticipantService.getParticipantById(participantId);
     if (!targetParticipant) {
@@ -151,7 +124,6 @@ export class CharacterSheetService {
     }
     const roomId = targetParticipant.room.id;
 
-    const normalizedExt = ext === 'jpeg' ? 'jpg' : ext;
     const key = `uploads/characters/${roomId}/${participantId}/${nanoid()}.${normalizedExt}`;
 
     const presignedUrl = await this.s3service.getPresignedPutUrl(
@@ -161,8 +133,5 @@ export class CharacterSheetService {
     const publicUrl = this.s3service.getCloudFrontUrl(key);
 
     return { presignedUrl, publicUrl, key };
-  }
-  private getExtension(filename: string): string {
-    return filename.split('.').pop()?.toLowerCase() || 'bin';
   }
 }

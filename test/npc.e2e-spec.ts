@@ -17,6 +17,7 @@ import {
   signUpAndLogin,
   truncateAllTables,
 } from './utils/test.util';
+import { ImageMimeType } from '@/common/enums/image-mime-type.enum';
 
 describe('NpcController (e2e)', () => {
   let app: INestApplication;
@@ -34,8 +35,27 @@ describe('NpcController (e2e)', () => {
   let gmToken: string;
   let playerToken: string;
   // let otherPlayerToken: string;
-
   let testRoom: Room;
+
+  const VALID_IMAGE_CASES = [
+    { fileName: 'avatar.png', contentType: ImageMimeType.PNG },
+    { fileName: 'character.jpg', contentType: ImageMimeType.JPEG },
+    { fileName: 'monster.jpeg', contentType: ImageMimeType.JPEG },
+    { fileName: 'map.webp', contentType: ImageMimeType.WEBP },
+  ] as const;
+
+  const validateNpcKeyFormat = (
+    key: string,
+    fileName: string,
+    roomId: string,
+  ) => {
+    const ext = fileName.split('.').pop()!.toLowerCase();
+    const normalizedExt = ext === 'jpeg' ? 'jpg' : ext;
+    const keyPattern = new RegExp(
+      `^uploads/npcs/${roomId}/[a-zA-Z0-9_-]+\\.${normalizedExt}$`,
+    );
+    expect(key).toMatch(keyPattern);
+  };
 
   beforeAll(async () => {
     const testApp = await setupTestApp();
@@ -55,7 +75,6 @@ describe('NpcController (e2e)', () => {
   beforeEach(async () => {
     await truncateAllTables(dataSource);
 
-    // 사용자 생성
     const gmUserInfo = createUserDto();
     const playerUserInfo = createUserDto();
     const otherPlayerUserInfo = createUserDto();
@@ -73,7 +92,6 @@ describe('NpcController (e2e)', () => {
       email: otherPlayerUserInfo.email,
     });
 
-    // 방 생성 (GM이 방장)
     await roomService.createRoom(
       {
         system: TrpgSystem.DND5E,
@@ -89,7 +107,6 @@ describe('NpcController (e2e)', () => {
       relations: ['creator', 'participants', 'participants.user'],
     });
 
-    // 방장 역할을 GM으로 설정
     await roomService.updateParticipantRole(
       testRoom.id,
       gmUser.id,
@@ -97,18 +114,11 @@ describe('NpcController (e2e)', () => {
       ParticipantRole.GM,
     );
 
-    // 플레이어 참여
     await roomService.joinRoom(testRoom.id, playerUser.id, {
       password: 'test1234',
     });
     await roomService.joinRoom(testRoom.id, otherPlayerUser.id, {
       password: 'test1234',
-    });
-
-    // 최종 방 상태 로드
-    testRoom = await roomRepository.findOne({
-      where: { id: testRoom.id },
-      relations: ['participants', 'participants.user'],
     });
   });
 
@@ -337,6 +347,28 @@ describe('NpcController (e2e)', () => {
     });
   });
 
+  describe('UC-06: NPC 이미지 업로드 Presigned URL 발급 - 성공 케이스', () => {
+    VALID_IMAGE_CASES.forEach(({ fileName, contentType }) => {
+      it(`성공: GM이 roomId 기반으로 유효한 이미지(${fileName}, ${contentType})에 대한 Presigned URL을 발급받음`, async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/npcs/room/${testRoom.id}/presigned-url`)
+          .set('Authorization', `Bearer ${gmToken}`)
+          .send({ fileName, contentType })
+          .expect(201);
+
+        const { key, presignedUrl, publicUrl } = res.body;
+
+        validateNpcKeyFormat(key, fileName, testRoom.id);
+
+        expect(presignedUrl).toContain(key);
+        expect(presignedUrl).toMatch(
+          /^https:\/\/mock-presigned\.s3\.amazonaws\.com\/.*\?X-Amz-Signature=mock$/,
+        );
+        expect(publicUrl.trim()).toBe(`https://d12345.cloudfront.net/${key}`);
+      });
+    });
+  });
+
   // ========== 엣지 케이스 테스트 ==========
 
   describe('EC-01: 권한 없는 요청', () => {
@@ -412,6 +444,75 @@ describe('NpcController (e2e)', () => {
         .post(`/npcs/room/${testRoom.id}`)
         .set('Authorization', `Bearer ${gmToken}`)
         .send({ data: {}, isPublic: true, type: 'invalid-type' })
+        .expect(400);
+    });
+  });
+
+  describe('EC-06: NPC 이미지 업로드 Presigned URL 발급 - 실패 케이스', () => {
+    it('실패: PLAYER가 요청 시 403 반환 (GM만 허용)', async () => {
+      const { fileName, contentType } = VALID_IMAGE_CASES[0];
+      await request(app.getHttpServer())
+        .post(`/npcs/room/${testRoom.id}/presigned-url`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .send({ fileName, contentType })
+        .expect(403);
+    });
+
+    it('실패: 존재하지 않는 roomId → 403 (방 접근 권한 없음)', async () => {
+      const nonExistentRoomId = '123e4567-e89b-12d3-a456-426614174000';
+      const { fileName, contentType } = VALID_IMAGE_CASES[0];
+      await request(app.getHttpServer())
+        .post(`/npcs/room/${nonExistentRoomId}/presigned-url`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ fileName, contentType })
+        .expect(403);
+    });
+
+    it('실패: 지원하지 않는 MIME 타입 → 400', async () => {
+      await request(app.getHttpServer())
+        .post(`/npcs/room/${testRoom.id}/presigned-url`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ fileName: 'document.pdf', contentType: 'application/pdf' })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.message).toContain('지원하지 않는 파일 형식입니다.');
+        });
+    });
+
+    it('실패: 확장자와 MIME 타입 불일치 → 400', async () => {
+      await request(app.getHttpServer())
+        .post(`/npcs/room/${testRoom.id}/presigned-url`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ fileName: 'image.png', contentType: ImageMimeType.JPEG })
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.message).toContain(
+            '파일 확장자와 MIME 타입이 일치하지 않습니다.',
+          );
+        });
+    });
+
+    it('실패: 파일 이름에 확장자가 없음 → 400', async () => {
+      await request(app.getHttpServer())
+        .post(`/npcs/room/${testRoom.id}/presigned-url`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ fileName: 'no_extension', contentType: ImageMimeType.PNG })
+        .expect(400);
+    });
+
+    it('실패: 빈 파일 이름 → 400', async () => {
+      await request(app.getHttpServer())
+        .post(`/npcs/room/${testRoom.id}/presigned-url`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ fileName: '', contentType: ImageMimeType.PNG })
+        .expect(400);
+    });
+
+    it('실패: roomId가 UUID 형식이 아님 → 400 (ParseUUIDPipe 실패)', async () => {
+      await request(app.getHttpServer())
+        .post(`/npcs/room/invalid-room-id/presigned-url`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send(VALID_IMAGE_CASES[0])
         .expect(400);
     });
   });

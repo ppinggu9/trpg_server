@@ -30,8 +30,8 @@ import { CreateCharacterSheetDto } from './dto/create-character-sheet.dto';
 import { UpdateCharacterSheetDto } from './dto/update-character-sheet.dto';
 import { CharacterSheetResponseDto } from './dto/character-sheet-response.dto';
 import { RequestWithUser } from '@/auth/types/request-with-user.dto';
-import { CreatePresignedUrlDto } from './dto/create-presigned-url.dto';
-import { PresignedUrlResponseDto } from './dto/presigned-url-response.dto';
+import { CreatePresignedUrlDto } from '@/common/dto/create-presigned-url.dto';
+import { PresignedUrlResponseDto } from '@/common/dto/presigned-url-response.dto';
 
 @ApiTags('Character Sheets')
 @UseGuards(JwtAuthGuard)
@@ -86,12 +86,30 @@ export class CharacterSheetController {
   })
   @ApiParam({
     name: 'participantId',
+    type: Number,
     description: '방 참가자 ID (자신의 참가자 ID 또는 GM 권한 필요)',
   })
   @ApiBody({ type: CreatePresignedUrlDto })
-  @ApiOkResponse({ type: PresignedUrlResponseDto })
+  @ApiOkResponse({
+    description: 'Presigned URL 발급 성공',
+    type: PresignedUrlResponseDto,
+    content: {
+      'application/json': {
+        example: {
+          presignedUrl:
+            'https://your-bucket.s3.ap-northeast-2.amazonaws.com/uploads/...?X-Amz-Signature=abc123',
+          publicUrl: 'https://d12345.cloudfront.net/uploads/abc123.png',
+          key: 'uploads/characters/room-123/456/abc123.png',
+        },
+      },
+    },
+  })
   @ApiBadRequestResponse({
-    description: '지원하지 않는 파일 형식 또는 잘못된 요청',
+    description:
+      '다음 중 하나의 이유로 실패: \n' +
+      '- 지원하지 않는 MIME 타입 (허용: image/jpeg, image/png, image/webp)\n' +
+      '- 지원하지 않는 파일 확장자 (.jpg, .jpeg, .png, .webp만 허용)\n' +
+      '- MIME 타입과 파일 확장자가 일치하지 않음',
   })
   @ApiForbiddenResponse({
     description:
