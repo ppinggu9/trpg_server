@@ -28,6 +28,7 @@ import { S3Module } from './s3/s3.module';
         DATABASE_DROP_SCHEMA: Joi.boolean().required(),
         DATABASE_LOGGING: Joi.boolean().required(),
         DATABASE_MIGRATIONS_RUN: Joi.boolean().required(),
+        FRONTEND_ORIGIN: Joi.string().optional(),
         AWS_REGION: Joi.string().required(),
         AWS_ACCESS_KEY_ID: Joi.string().optional(),
         AWS_SECRET_ACCESS_KEY: Joi.string().optional(),

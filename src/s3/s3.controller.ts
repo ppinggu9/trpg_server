@@ -4,15 +4,14 @@
 //   Post,
 //   Body,
 //   BadRequestException,
-//   UseGuards,
+//   //   UseGuards,
 // } from '@nestjs/common';
 // import { v4 as uuidv4 } from 'uuid';
 // import { S3Service } from './s3.service';
 // import { ApiBearerAuth } from '@nestjs/swagger';
-// import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+// // import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 
 // @ApiBearerAuth()
-// @UseGuards(JwtAuthGuard)
 // @Controller('s3-test')
 // export class S3Controller {
 //   constructor(private readonly s3Service: S3Service) {}
