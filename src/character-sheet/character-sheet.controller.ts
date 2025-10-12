@@ -32,6 +32,7 @@ import { CharacterSheetResponseDto } from './dto/character-sheet-response.dto';
 import { RequestWithUser } from '@/auth/types/request-with-user.dto';
 import { CreatePresignedUrlDto } from '@/common/dto/create-presigned-url.dto';
 import { PresignedUrlResponseDto } from '@/common/dto/presigned-url-response.dto';
+import { CHARACTER_SHEET_ERRORS } from './constant/character-sheet.constants';
 
 @ApiTags('Character Sheets')
 @UseGuards(JwtAuthGuard)
@@ -49,6 +50,7 @@ export class CharacterSheetController {
   })
   @ApiParam({
     name: 'participantId',
+    type: 'number',
     description: '방 참가자 ID',
   })
   @ApiBody({ type: CreateCharacterSheetDto })
@@ -56,21 +58,27 @@ export class CharacterSheetController {
     description: '캐릭터 시트 생성 성공',
     type: CharacterSheetResponseDto,
   })
-  @ApiBadRequestResponse({ description: '잘못된 요청 (유효성 검사 실패)' })
-  @ApiConflictResponse({
-    description: '이미 시트가 존재함 또는 타인의 시트 생성 시도',
+  @ApiBadRequestResponse({
+    description: '잘못된 요청 (유효성 검사 실패)',
   })
-  @ApiNotFoundResponse({ description: '참가자를 찾을 수 없음' })
+  @ApiConflictResponse({
+    description: CHARACTER_SHEET_ERRORS.SHEET_ALREADY_EXISTS,
+  })
+  @ApiForbiddenResponse({
+    description: CHARACTER_SHEET_ERRORS.OWNERSHIP_REQUIRED,
+  })
+  @ApiNotFoundResponse({
+    description: CHARACTER_SHEET_ERRORS.PARTICIPANT_NOT_FOUND,
+  })
   async create(
     @Param('participantId', ParseIntPipe) participantId: number,
     @Body() createDto: CreateCharacterSheetDto,
     @Req() req: RequestWithUser,
   ) {
-    const userId = req.user.id;
     const createdSheet = await this.characterSheetService.createCharacterSheet(
       participantId,
       createDto,
-      userId,
+      req.user.id,
     );
     return CharacterSheetResponseDto.fromEntity(createdSheet);
   }
@@ -86,7 +94,7 @@ export class CharacterSheetController {
   })
   @ApiParam({
     name: 'participantId',
-    type: Number,
+    type: 'number',
     description: '방 참가자 ID (자신의 참가자 ID 또는 GM 권한 필요)',
   })
   @ApiBody({ type: CreatePresignedUrlDto })
@@ -97,7 +105,7 @@ export class CharacterSheetController {
       'application/json': {
         example: {
           presignedUrl:
-            'https://your-bucket.s3.ap-northeast-2.amazonaws.com/uploads/...?X-Amz-Signature=abc123',
+            'https://mock-presigned.s3.amazonaws.com/uploads/...?X-Amz-Signature=mock',
           publicUrl: 'https://d12345.cloudfront.net/uploads/abc123.png',
           key: 'uploads/characters/room-123/456/abc123.png',
         },
@@ -106,17 +114,16 @@ export class CharacterSheetController {
   })
   @ApiBadRequestResponse({
     description:
-      '다음 중 하나의 이유로 실패: \n' +
+      '다음 중 하나의 이유로 실패:\n' +
       '- 지원하지 않는 MIME 타입 (허용: image/jpeg, image/png, image/webp)\n' +
       '- 지원하지 않는 파일 확장자 (.jpg, .jpeg, .png, .webp만 허용)\n' +
       '- MIME 타입과 파일 확장자가 일치하지 않음',
   })
   @ApiForbiddenResponse({
-    description:
-      '해당 캐릭터 시트에 대한 업로드 권한 없음 (소유자 또는 GM만 가능)',
+    description: CHARACTER_SHEET_ERRORS.NO_WRITE_PERMISSION,
   })
   @ApiNotFoundResponse({
-    description: '해당 participantId를 찾을 수 없음',
+    description: CHARACTER_SHEET_ERRORS.PARTICIPANT_NOT_FOUND,
   })
   async getPresignedUrlForCharacterSheet(
     @Param('participantId', ParseIntPipe) participantId: number,
@@ -133,9 +140,13 @@ export class CharacterSheetController {
 
   @Get(':participantId')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '캐릭터 시트 조회' })
+  @ApiOperation({
+    summary: '캐릭터 시트 조회',
+    description: '소유자, GM, 또는 공개 시트인 경우 조회 가능합니다.',
+  })
   @ApiParam({
     name: 'participantId',
+    type: 'number',
     description: '방 참가자 ID',
   })
   @ApiOkResponse({
@@ -143,17 +154,18 @@ export class CharacterSheetController {
     type: CharacterSheetResponseDto,
   })
   @ApiForbiddenResponse({
-    description: '접근 권한 없음 (GM/OWNER/Public 아님)',
+    description: CHARACTER_SHEET_ERRORS.NO_READ_PERMISSION,
   })
-  @ApiNotFoundResponse({ description: '캐릭터 시트를 찾을 수 없음' })
+  @ApiNotFoundResponse({
+    description: CHARACTER_SHEET_ERRORS.SHEET_NOT_FOUND,
+  })
   async findOne(
     @Param('participantId', ParseIntPipe) participantId: number,
     @Req() req: RequestWithUser,
   ) {
-    const userId = req.user.id;
     const foundSheet = await this.characterSheetService.getCharacterSheet(
       participantId,
-      userId,
+      req.user.id,
     );
     return CharacterSheetResponseDto.fromEntity(foundSheet);
   }
@@ -163,10 +175,11 @@ export class CharacterSheetController {
   @ApiOperation({
     summary: '캐릭터 시트 업데이트',
     description:
-      '캐릭터 시트를 업데이트합니다. (멱등성 보장: 항상 최신 데이터로 덮어씀)',
+      '캐릭터 시트를 업데이트합니다. isPublic 필드는 GM만 수정 가능합니다.',
   })
   @ApiParam({
     name: 'participantId',
+    type: 'number',
     description: '방 참가자 ID',
   })
   @ApiBody({ type: UpdateCharacterSheetDto })
@@ -175,18 +188,19 @@ export class CharacterSheetController {
     type: CharacterSheetResponseDto,
   })
   @ApiForbiddenResponse({
-    description: '수정 권한 없음 또는 isPublic은 GM만 변경 가능',
+    description: CHARACTER_SHEET_ERRORS.NO_WRITE_PERMISSION,
   })
-  @ApiNotFoundResponse({ description: '캐릭터 시트를 찾을 수 없음' })
+  @ApiNotFoundResponse({
+    description: CHARACTER_SHEET_ERRORS.SHEET_NOT_FOUND,
+  })
   async update(
     @Param('participantId', ParseIntPipe) participantId: number,
     @Body() updateDto: UpdateCharacterSheetDto,
     @Req() req: RequestWithUser,
   ) {
-    const userId = req.user.id;
     const updatedSheet = await this.characterSheetService.updateCharacterSheet(
       participantId,
-      userId,
+      req.user.id,
       updateDto,
     );
     return CharacterSheetResponseDto.fromEntity(updatedSheet);

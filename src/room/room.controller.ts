@@ -25,7 +25,6 @@ import {
   getSchemaPath,
   ApiCreatedResponse,
   ApiBadRequestResponse,
-  ApiUnauthorizedResponse,
   ApiConflictResponse,
   ApiOkResponse,
   ApiNotFoundResponse,
@@ -37,8 +36,9 @@ import { TransferCreatorDto } from './dto/transfer-creator.dto';
 import { UpdateParticipantRoleDto } from './dto/updateparticipantrole.dto';
 import { RoomOperationResponseDto } from './dto/room-operation-response.dto';
 import { RoomResponseDto } from './dto/room-response.dto';
-import { ROOM_MESSAGES } from './constants/room.constants';
+import { ROOM_ERRORS, ROOM_MESSAGES } from './constants/room.constants';
 import { RoomParticipantDto } from './dto/room-participant.dto';
+import { RequestWithUser } from '@/auth/types/request-with-user.dto';
 
 @UseGuards(JwtAuthGuard)
 @ApiTags('rooms')
@@ -50,7 +50,7 @@ export class RoomController {
   @Post()
   @ApiOperation({
     summary: '방 생성',
-    description: '새로운 방(채팅방 역할도 함께)을 생성합니다.',
+    description: '새로운 방을 생성합니다.',
   })
   @ApiBody({ type: CreateRoomDto })
   @ApiCreatedResponse({
@@ -58,40 +58,31 @@ export class RoomController {
     schema: {
       type: 'object',
       properties: {
-        message: {
-          type: 'string',
-          example: ROOM_MESSAGES.CREATED,
-        },
-        room: {
-          $ref: getSchemaPath(RoomResponseDto),
-        },
+        message: { type: 'string', example: ROOM_MESSAGES.CREATED },
+        room: { $ref: getSchemaPath(RoomResponseDto) },
       },
     },
   })
-  @ApiBadRequestResponse({
-    description: '잘못된 요청 (유효성 검사 실패)',
-  })
-  @ApiUnauthorizedResponse({
-    description: '인증되지 않은 사용자',
-  })
-  @ApiConflictResponse({
-    description:
-      '이미 다른 방에 참여 중이거나 방 참가 처리 중 다른 요청으로 인해 방이 삭제되었습니다.',
-  })
+  @ApiBadRequestResponse({ description: '잘못된 요청 (유효성 검사 실패)' })
+  @ApiConflictResponse({ description: ROOM_ERRORS.ROOM_JOIN_CONFLICT })
   async createRoom(
     @Body() createRoomDto: CreateRoomDto,
-    @Req() req,
+    @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
-    const userId = req.user.id;
-    return this.roomService.createRoom(createRoomDto, userId);
+    return this.roomService.createRoom(createRoomDto, req.user.id);
   }
 
   @Post(':roomId/join')
   @ApiOperation({
     summary: '방 참여',
-    description: '기존 채팅 방에 참여합니다.',
+    description: '기존 방에 참여합니다.',
   })
-  @ApiParam({ name: 'roomId', description: '참여할 방의 ID', type: 'string' })
+  @ApiParam({
+    name: 'roomId',
+    type: 'string',
+    format: 'uuid',
+    description: '참여할 방의 UUID',
+  })
   @ApiBody({ type: JoinRoomDto })
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
@@ -99,33 +90,21 @@ export class RoomController {
     schema: {
       type: 'object',
       properties: {
-        message: {
-          type: 'string',
-          example: ROOM_MESSAGES.JOINED,
-        },
-        room: {
-          $ref: getSchemaPath(RoomResponseDto),
-        },
+        message: { type: 'string', example: ROOM_MESSAGES.JOINED },
+        room: { $ref: getSchemaPath(RoomResponseDto) },
       },
     },
   })
   @ApiBadRequestResponse({
-    description:
-      '방이 꽉 찼거나 비밀번호를 입력해주세요 또는 비밀번호가 일치하지 않습니다.',
+    description: `${ROOM_ERRORS.ROOM_FULL} 또는 ${ROOM_ERRORS.PASSWORD_REQUIRED} 또는 ${ROOM_ERRORS.PASSWORD_MISMATCH}`,
   })
-  @ApiUnauthorizedResponse({
-    description: '인증되지 않은 사용자',
-  })
-  @ApiNotFoundResponse({
-    description: '방을 찾을 수 없음',
-  })
+  @ApiNotFoundResponse({ description: ROOM_ERRORS.NOT_FOUND })
   async joinRoom(
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Body() joinRoomDto: JoinRoomDto,
-    @Req() req,
+    @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
-    const userId = req.user.id;
-    return this.roomService.joinRoom(roomId, userId, joinRoomDto);
+    return this.roomService.joinRoom(roomId, req.user.id, joinRoomDto);
   }
 
   @Post(':roomId/leave')
@@ -134,22 +113,19 @@ export class RoomController {
     summary: '방 나가기',
     description: '참여 중인 방에서 나갑니다. (방장은 직접 나갈 수 없음)',
   })
-  @ApiParam({ name: 'roomId', description: '나갈 방의 ID', type: 'string' })
-  @ApiNoContentResponse({
-    description: '방 나가기 성공 (멱등성 보장)',
+  @ApiParam({
+    name: 'roomId',
+    type: 'string',
+    format: 'uuid',
+    description: '나갈 방의 UUID',
   })
-  @ApiForbiddenResponse({
-    description: '방장은 직접 방을 나갈 수 없습니다',
-  })
-  @ApiUnauthorizedResponse({
-    description: '인증되지 않은 사용자',
-  })
+  @ApiNoContentResponse({ description: '방 나가기 성공 (멱등성 보장)' })
+  @ApiForbiddenResponse({ description: ROOM_ERRORS.CANNOT_LEAVE_AS_CREATOR })
   async leaveRoom(
     @Param('roomId', ParseUUIDPipe) roomId: string,
-    @Req() req,
+    @Req() req: RequestWithUser,
   ): Promise<void> {
-    const userId = req.user.id;
-    await this.roomService.leaveRoom(userId, roomId);
+    await this.roomService.leaveRoom(req.user.id, roomId);
   }
 
   @Delete(':roomId')
@@ -158,22 +134,19 @@ export class RoomController {
     summary: '방 삭제',
     description: '방장만 자신의 방을 삭제할 수 있습니다.',
   })
-  @ApiParam({ name: 'roomId', description: '삭제할 방의 ID', type: 'string' })
-  @ApiNoContentResponse({
-    description: '방 삭제 성공 (멱등성 보장)',
+  @ApiParam({
+    name: 'roomId',
+    type: 'string',
+    format: 'uuid',
+    description: '삭제할 방의 UUID',
   })
-  @ApiUnauthorizedResponse({
-    description: '인증되지 않은 사용자',
-  })
-  @ApiForbiddenResponse({
-    description: '방장이 아님',
-  })
+  @ApiNoContentResponse({ description: '방 삭제 성공 (멱등성 보장)' })
+  @ApiForbiddenResponse({ description: ROOM_ERRORS.NOT_ROOM_CREATOR })
   async deleteRoom(
     @Param('roomId', ParseUUIDPipe) roomId: string,
-    @Req() req,
+    @Req() req: RequestWithUser,
   ): Promise<void> {
-    const userId = req.user.id;
-    await this.roomService.deleteRoom(roomId, userId);
+    await this.roomService.deleteRoom(roomId, req.user.id);
   }
 
   @Patch(':roomId/transfer-creator')
@@ -181,40 +154,37 @@ export class RoomController {
     summary: '방장 권한 위임',
     description: '방장이 다른 참여자에게 방장 권한을 위임합니다.',
   })
-  @ApiParam({ name: 'roomId', description: '방 ID', type: 'string' })
+  @ApiParam({
+    name: 'roomId',
+    type: 'string',
+    format: 'uuid',
+    description: '방 UUID',
+  })
   @ApiBody({ type: TransferCreatorDto })
   @ApiOkResponse({
     description: '방장 권한 위임 성공',
     schema: {
       type: 'object',
       properties: {
-        message: {
-          type: 'string',
-          example: ROOM_MESSAGES.CREATOR_TRANSFERRED,
-        },
-        room: {
-          $ref: getSchemaPath(RoomResponseDto),
-        },
+        message: { type: 'string', example: ROOM_MESSAGES.CREATOR_TRANSFERRED },
+        room: { $ref: getSchemaPath(RoomResponseDto) },
       },
     },
   })
   @ApiBadRequestResponse({
-    description:
-      '잘못된 요청 (대상 사용자가 방에 없음 또는 자신에게 방장 권한을 위임할 수 없습니다)',
+    description: `${ROOM_ERRORS.CANNOT_TRANSFER_TO_SELF} 또는 ${ROOM_ERRORS.TARGET_NOT_IN_ROOM}`,
   })
-  @ApiUnauthorizedResponse({
-    description: '인증되지 않은 사용자',
-  })
-  @ApiForbiddenResponse({
-    description: '방장이 아님',
-  })
+  @ApiForbiddenResponse({ description: ROOM_ERRORS.NOT_ROOM_CREATOR })
   async transferCreator(
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Body() dto: TransferCreatorDto,
-    @Req() req,
+    @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
-    const userId = req.user.id;
-    return this.roomService.transferCreator(roomId, userId, dto.newCreatorId);
+    return this.roomService.transferCreator(
+      roomId,
+      req.user.id,
+      dto.newCreatorId,
+    );
   }
 
   @Patch(':roomId/participants/:userId/role')
@@ -222,58 +192,62 @@ export class RoomController {
     summary: '참여자 역할 변경',
     description: '방장이 참여자의 역할을 변경합니다.',
   })
-  @ApiParam({ name: 'roomId', description: '방 ID', type: 'string' })
-  @ApiParam({ name: 'userId', description: '대상 사용자 ID', type: 'number' })
+  @ApiParam({
+    name: 'roomId',
+    type: 'string',
+    format: 'uuid',
+    description: '방 UUID',
+  })
+  @ApiParam({
+    name: 'userId',
+    type: 'number',
+    description: '대상 사용자 ID',
+  })
   @ApiBody({ type: UpdateParticipantRoleDto })
   @ApiOkResponse({
     description: '역할 변경 성공',
     schema: {
       type: 'object',
       properties: {
-        message: {
-          type: 'string',
-          example: ROOM_MESSAGES.ROLE_UPDATED,
-        },
-        room: {
-          $ref: getSchemaPath(RoomResponseDto),
-        },
+        message: { type: 'string', example: ROOM_MESSAGES.ROLE_UPDATED },
+        room: { $ref: getSchemaPath(RoomResponseDto) },
       },
     },
   })
   @ApiBadRequestResponse({
-    description:
-      '잘못된 요청 (대상 사용자가 방에 없음 또는 유효하지 않은 역할)',
+    description: `${ROOM_ERRORS.TARGET_NOT_IN_ROOM} 또는 ${ROOM_ERRORS.INVALID_PARTICIPANT_ROLE}`,
   })
-  @ApiUnauthorizedResponse({
-    description: '인증되지 않은 사용자',
-  })
-  @ApiForbiddenResponse({
-    description: '방장이 아님',
-  })
+  @ApiForbiddenResponse({ description: ROOM_ERRORS.NOT_ROOM_CREATOR })
   async updateParticipantRole(
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Param('userId', ParseIntPipe) userId: number,
     @Body() dto: UpdateParticipantRoleDto,
-    @Req() req,
+    @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
-    const currentUserId = req.user.id;
     return this.roomService.updateParticipantRole(
       roomId,
-      currentUserId,
+      req.user.id,
       userId,
       dto.role,
     );
   }
+
   @Get(':roomId/participants')
   @ApiOperation({
     summary: '참여자 목록만 조회',
     description: '해당 방의 참여자 목록만 반환합니다. (방 정보 제외)',
   })
-  @ApiParam({ name: 'roomId', description: '방 ID', type: 'string' })
+  @ApiParam({
+    name: 'roomId',
+    type: 'string',
+    format: 'uuid',
+    description: '방 UUID',
+  })
   @ApiOkResponse({
     description: '참여자 목록 조회 성공',
     type: [RoomParticipantDto],
   })
+  @ApiNotFoundResponse({ description: ROOM_ERRORS.NOT_FOUND })
   async getParticipantsOnly(
     @Param('roomId', ParseUUIDPipe) roomId: string,
   ): Promise<RoomParticipantDto[]> {
@@ -285,17 +259,17 @@ export class RoomController {
     summary: '방 정보 조회',
     description: '방 정보와 참여자 목록을 조회합니다.',
   })
-  @ApiParam({ name: 'roomId', description: '조회할 방의 ID', type: 'string' })
+  @ApiParam({
+    name: 'roomId',
+    type: 'string',
+    format: 'uuid',
+    description: '조회할 방의 UUID',
+  })
   @ApiOkResponse({
     description: '방 정보 조회 성공',
     type: RoomResponseDto,
   })
-  @ApiUnauthorizedResponse({
-    description: '인증되지 않은 사용자',
-  })
-  @ApiNotFoundResponse({
-    description: '방을 찾을 수 없음',
-  })
+  @ApiNotFoundResponse({ description: ROOM_ERRORS.NOT_FOUND })
   async getRoom(
     @Param('roomId', ParseUUIDPipe) roomId: string,
   ): Promise<RoomResponseDto> {

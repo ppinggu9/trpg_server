@@ -21,12 +21,13 @@ import {
   ApiOperation,
   ApiParam,
   ApiBody,
-  ApiResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiQuery,
   ApiOkResponse,
   ApiBadRequestResponse,
+  ApiCreatedResponse,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { RequestWithUser } from '@/auth/types/request-with-user.dto';
 import { NpcService } from './npc.service';
@@ -36,6 +37,8 @@ import { UpdateNpcDto } from './dto/update-npc.dto';
 import { NpcType } from '@/common/enums/npc-type.enum';
 import { CreatePresignedUrlDto } from '@/common/dto/create-presigned-url.dto';
 import { PresignedUrlResponseDto } from '@/common/dto/presigned-url-response.dto';
+import { NPC_ERRORS, NPC_MESSAGES } from './constants/npc.constants';
+import { DeleteNpcResponseDto } from './dto/delete-npc-response.dto';
 
 @ApiTags('NPCs')
 @UseGuards(JwtAuthGuard)
@@ -45,12 +48,33 @@ export class NpcController {
   constructor(private readonly npcService: NpcService) {}
 
   @Post('room/:roomId')
-  @ApiOperation({ summary: 'NPC 생성 (GM 전용)' })
-  @ApiParam({ name: 'roomId', type: 'string' })
+  @ApiOperation({
+    summary: 'NPC 생성',
+    description: '방(GM)에서 새로운 NPC를 생성합니다.',
+  })
+  @ApiParam({
+    name: 'roomId',
+    type: 'string',
+    format: 'uuid',
+    description: 'NPC를 생성할 방의 UUID',
+  })
   @ApiBody({ type: CreateNpcDto })
-  @ApiResponse({ status: 201, type: NpcResponseDto })
-  @ApiForbiddenResponse({ description: 'GM이 아님' })
-  @ApiNotFoundResponse({ description: '방 없음' })
+  @ApiCreatedResponse({
+    description: 'NPC 생성 성공',
+    type: NpcResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: '잘못된 요청 (유효성 검사 실패)',
+  })
+  @ApiUnauthorizedResponse({
+    description: '인증되지 않은 사용자',
+  })
+  @ApiForbiddenResponse({
+    description: NPC_ERRORS.GM_REQUIRED,
+  })
+  @ApiNotFoundResponse({
+    description: '방을 찾을 수 없음',
+  })
   async create(
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Body() dto: CreateNpcDto,
@@ -78,17 +102,6 @@ export class NpcController {
   @ApiOkResponse({
     description: 'Presigned URL 발급 성공',
     type: PresignedUrlResponseDto,
-    content: {
-      'application/json': {
-        example: {
-          presignedUrl:
-            'https://your-bucket.s3.ap-northeast-2.amazonaws.com/uploads/npcs/room-123/abc123.png?X-Amz-Signature=xyz',
-          publicUrl:
-            'https://d12345.cloudfront.net/uploads/npcs/room-123/abc123.png',
-          key: 'uploads/npcs/room-123/abc123.png',
-        },
-      },
-    },
   })
   @ApiBadRequestResponse({
     description:
@@ -97,12 +110,14 @@ export class NpcController {
       '- `fileName`의 확장자가 허용되지 않음 (.jpg, .jpeg, .png, .webp만 허용)\n' +
       '- `fileName` 확장자와 `contentType`이 서로 일치하지 않음',
   })
+  @ApiUnauthorizedResponse({
+    description: '인증되지 않은 사용자',
+  })
   @ApiForbiddenResponse({
-    description: '요청 사용자가 해당 방의 GM이 아님',
+    description: NPC_ERRORS.GM_REQUIRED,
   })
   @ApiNotFoundResponse({
-    description:
-      '해당 roomId의 방이 존재하지 않음 또는 사용자가 방에 참여하지 않음',
+    description: '방을 찾을 수 없음 또는 사용자가 방에 참여하지 않음',
   })
   async getPresignedUrlForNpcImage(
     @Param('roomId', ParseUUIDPipe) roomId: string,
@@ -118,11 +133,29 @@ export class NpcController {
   }
 
   @Get(':npcId')
-  @ApiOperation({ summary: 'NPC 조회' })
-  @ApiParam({ name: 'npcId', type: 'number' })
-  @ApiResponse({ status: 200, type: NpcResponseDto })
-  @ApiForbiddenResponse({ description: '권한 없음' })
-  @ApiNotFoundResponse({ description: 'NPC 없음' })
+  @ApiOperation({
+    summary: 'NPC 단건 조회',
+    description:
+      '특정 NPC 정보를 조회합니다. 비공개 NPC는 GM만 접근 가능합니다.',
+  })
+  @ApiParam({
+    name: 'npcId',
+    type: 'number',
+    description: '조회할 NPC의 ID',
+  })
+  @ApiOkResponse({
+    description: 'NPC 조회 성공',
+    type: NpcResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: '인증되지 않은 사용자',
+  })
+  @ApiForbiddenResponse({
+    description: NPC_ERRORS.READ_FORBIDDEN,
+  })
+  @ApiNotFoundResponse({
+    description: NPC_ERRORS.NOT_FOUND,
+  })
   async findOne(
     @Param('npcId', ParseIntPipe) npcId: number,
     @Req() req: RequestWithUser,
@@ -132,12 +165,32 @@ export class NpcController {
   }
 
   @Patch(':npcId')
-  @ApiOperation({ summary: 'NPC 업데이트 (GM 전용)' })
-  @ApiParam({ name: 'npcId', type: 'number' })
+  @ApiOperation({
+    summary: 'NPC 수정',
+    description: 'NPC 정보를 수정합니다. GM 전용 기능입니다.',
+  })
+  @ApiParam({
+    name: 'npcId',
+    type: 'number',
+    description: '수정할 NPC의 ID',
+  })
   @ApiBody({ type: UpdateNpcDto })
-  @ApiResponse({ status: 200, type: NpcResponseDto })
-  @ApiForbiddenResponse({ description: 'GM이 아님' })
-  @ApiNotFoundResponse({ description: 'NPC 없음' })
+  @ApiOkResponse({
+    description: 'NPC 수정 성공',
+    type: NpcResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: '잘못된 요청 (유효성 검사 실패)',
+  })
+  @ApiUnauthorizedResponse({
+    description: '인증되지 않은 사용자',
+  })
+  @ApiForbiddenResponse({
+    description: NPC_ERRORS.GM_REQUIRED,
+  })
+  @ApiNotFoundResponse({
+    description: NPC_ERRORS.NOT_FOUND,
+  })
   async update(
     @Param('npcId', ParseIntPipe) npcId: number,
     @Body() dto: UpdateNpcDto,
@@ -148,27 +201,65 @@ export class NpcController {
   }
 
   @Delete(':npcId')
-  @ApiOperation({ summary: 'NPC 삭제 (GM 전용)' })
-  @ApiParam({ name: 'npcId', type: 'number' })
-  @ApiResponse({
-    status: 200,
-    schema: { type: 'object', properties: { success: { type: 'boolean' } } },
+  @ApiOperation({
+    summary: 'NPC 삭제',
+    description: 'NPC를 삭제합니다. GM 전용 기능입니다.',
   })
-  @ApiForbiddenResponse({ description: 'GM이 아님' })
-  @ApiNotFoundResponse({ description: 'NPC 없음' })
+  @ApiParam({
+    name: 'npcId',
+    type: 'number',
+    description: '삭제할 NPC의 ID',
+  })
+  @ApiOkResponse({
+    description: 'NPC 삭제 성공',
+    type: DeleteNpcResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: '인증되지 않은 사용자' })
+  @ApiForbiddenResponse({ description: NPC_ERRORS.GM_REQUIRED })
+  @ApiNotFoundResponse({ description: NPC_ERRORS.NOT_FOUND })
   async remove(
     @Param('npcId', ParseIntPipe) npcId: number,
     @Req() req: RequestWithUser,
   ) {
-    return this.npcService.deleteNpc(npcId, req.user.id);
+    await this.npcService.deleteNpc(npcId, req.user.id);
+    return {
+      success: true,
+      message: NPC_MESSAGES.DELETED,
+    };
   }
 
   @Get()
-  @ApiOperation({ summary: '방별 NPC 목록 조회' })
-  @ApiQuery({ name: 'roomId', required: true, type: String })
-  @ApiOkResponse({ type: [NpcResponseDto] })
-  @ApiForbiddenResponse({ description: '방에 참여하지 않음' })
-  @ApiNotFoundResponse({ description: '방 없음' })
+  @ApiOperation({
+    summary: '방 내 NPC 목록 조회',
+    description:
+      '특정 방에 속한 NPC 목록을 조회합니다. 일반 참여자는 공개된 NPC만 볼 수 있습니다.',
+  })
+  @ApiQuery({
+    name: 'roomId',
+    type: 'string',
+    format: 'uuid',
+    required: true,
+    description: '방 UUID',
+  })
+  @ApiQuery({
+    name: 'type',
+    enum: NpcType,
+    required: false,
+    description: 'NPC 유형으로 필터링 (선택 사항)',
+  })
+  @ApiOkResponse({
+    description: 'NPC 목록 조회 성공',
+    type: [NpcResponseDto],
+  })
+  @ApiUnauthorizedResponse({
+    description: '인증되지 않은 사용자',
+  })
+  @ApiForbiddenResponse({
+    description: NPC_ERRORS.PARTICIPANT_NOT_IN_ROOM,
+  })
+  @ApiNotFoundResponse({
+    description: '방을 찾을 수 없음',
+  })
   async getNpcsByRoom(
     @Query('roomId', ParseUUIDPipe) roomId: string,
     @Req() req: RequestWithUser,
