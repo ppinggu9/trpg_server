@@ -9,6 +9,8 @@ import {
   UseGuards,
   ParseUUIDPipe,
   Req,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -20,6 +22,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
   getSchemaPath,
@@ -91,6 +94,7 @@ export class VttMapController {
   }
 
   @Post('presigned-url')
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'VTT 맵 이미지 업로드용 Presigned URL 발급',
     description:
@@ -105,7 +109,8 @@ export class VttMapController {
     description: '대상 방의 UUID',
   })
   @ApiBody({ type: CreatePresignedUrlDto })
-  @ApiOkResponse({
+  @ApiResponse({
+    status: 201,
     description: 'Presigned URL이 성공적으로 발급되었습니다.',
     type: PresignedUrlResponseDto,
   })

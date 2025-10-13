@@ -24,6 +24,7 @@ import {
   ApiNotFoundResponse,
   ApiConflictResponse,
   ApiBearerAuth,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { CharacterSheetService } from './character-sheet.service';
 import { CreateCharacterSheetDto } from './dto/create-character-sheet.dto';
@@ -84,7 +85,7 @@ export class CharacterSheetController {
   }
 
   @Post(':participantId/presigned-url')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: '캐릭터 시트용 이미지 업로드 Presigned URL 발급',
     description:
@@ -98,19 +99,10 @@ export class CharacterSheetController {
     description: '방 참가자 ID (자신의 참가자 ID 또는 GM 권한 필요)',
   })
   @ApiBody({ type: CreatePresignedUrlDto })
-  @ApiOkResponse({
-    description: 'Presigned URL 발급 성공',
+  @ApiResponse({
+    status: 201,
+    description: 'Presigned URL이 성공적으로 발급되었습니다.',
     type: PresignedUrlResponseDto,
-    content: {
-      'application/json': {
-        example: {
-          presignedUrl:
-            'https://mock-presigned.s3.amazonaws.com/uploads/...?X-Amz-Signature=mock',
-          publicUrl: 'https://d12345.cloudfront.net/uploads/abc123.png',
-          key: 'uploads/characters/room-123/456/abc123.png',
-        },
-      },
-    },
   })
   @ApiBadRequestResponse({
     description:

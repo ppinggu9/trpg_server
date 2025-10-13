@@ -13,6 +13,8 @@ import {
   ParseUUIDPipe,
   Query,
   ParseEnumPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import {
@@ -28,6 +30,7 @@ import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
   ApiUnauthorizedResponse,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { RequestWithUser } from '@/auth/types/request-with-user.dto';
 import { NpcService } from './npc.service';
@@ -85,6 +88,7 @@ export class NpcController {
   }
 
   @Post('room/:roomId/presigned-url')
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'NPC 이미지 업로드용 Presigned URL 발급 (GM 전용)',
     description:
@@ -99,8 +103,9 @@ export class NpcController {
     description: '대상 방의 UUID',
   })
   @ApiBody({ type: CreatePresignedUrlDto })
-  @ApiOkResponse({
-    description: 'Presigned URL 발급 성공',
+  @ApiResponse({
+    status: 201,
+    description: 'Presigned URL이 성공적으로 발급되었습니다.',
     type: PresignedUrlResponseDto,
   })
   @ApiBadRequestResponse({

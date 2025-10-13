@@ -341,7 +341,7 @@ describe('CharacterSheetController (e2e)', () => {
         .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
         .set('Authorization', `Bearer ${playerToken}`)
         .send({ fileName, contentType })
-        .expect(200);
+        .expect(201);
 
       const { key, presignedUrl, publicUrl } = res.body;
 
@@ -361,7 +361,7 @@ describe('CharacterSheetController (e2e)', () => {
         .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
         .set('Authorization', `Bearer ${gmToken}`)
         .send({ fileName, contentType })
-        .expect(200);
+        .expect(201);
 
       validateKeyFormat(
         res.body.key,
@@ -377,7 +377,7 @@ describe('CharacterSheetController (e2e)', () => {
           .post(`/character-sheets/${playerParticipant.id}/presigned-url`)
           .set('Authorization', `Bearer ${playerToken}`)
           .send({ fileName, contentType })
-          .expect(200);
+          .expect(201);
 
         validateKeyFormat(
           res.body.key,
