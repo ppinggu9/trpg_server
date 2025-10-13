@@ -49,7 +49,7 @@ sessions: Dict[str, SessionState] = {}
 # ==========================
 # Env & OpenAI client
 # ==========================
-load_dotenv(dotenv_path=Path(__file__).parent / ".env")
+load_dotenv(dotenv_path=Path(__file__).parent / ".env.trpg")
 api_key = os.getenv("OPENAI_API_KEY")
 MODEL_DEFAULT = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")  # ChatGPT UI에서는 4.1-mini가 4o-mini를 대체
 MODEL_FALLBACK = os.getenv("OPENAI_MODEL_FALLBACK", "gpt-5 -mini")

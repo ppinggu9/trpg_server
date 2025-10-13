@@ -13,6 +13,7 @@ import {
 import { RoomParticipant } from './room-participant.entity';
 import { User } from '@/users/entities/user.entity';
 import { TrpgSystem } from '@/common/enums/trpg-system.enum';
+import { VttMap } from '@/vttmap/entities/vttmap.entity';
 
 @Entity()
 export class Room {
@@ -66,4 +67,8 @@ export class Room {
     onDelete: 'SET NULL',
   })
   creator: User | null;
+
+  // 이름혼란을 위해 vttmap으로 설정
+  @OneToOne(() => VttMap, (vttmap) => vttmap.room, { nullable: true })
+  vttmap: VttMap;
 }

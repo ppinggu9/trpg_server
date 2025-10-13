@@ -375,4 +375,8 @@ export class RoomService {
     }
     return room;
   }
+
+  async updateRoomMap(room: Room): Promise<void> {
+    await this.roomRepository.save(room);
+  }
 }
