@@ -68,6 +68,6 @@ export class Room {
   })
   creator: User | null;
 
-  @OneToOne(() => VttMap, (vttmap) => vttmap.room, { nullable: true })
-  vttmap: VttMap;
+  @OneToMany(() => VttMap, (vttMap) => vttMap.room, { nullable: true })
+  vttmaps: VttMap[];
 }

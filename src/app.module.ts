@@ -52,6 +52,7 @@ import { VttmapModule } from './vttmap/vttmap.module';
     HttpModule,
     S3Module,
     VttmapModule,
+    // TokenModule,
   ],
   controllers: [AppController],
   providers: [AppService],

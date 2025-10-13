@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
-  OneToOne,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -34,9 +34,15 @@ export class VttMap {
   @Column({ type: 'boolean', default: true })
   showGrid: boolean;
 
-  @OneToOne(() => Room, (room) => room.vttmap, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Room, (room) => room.vttmaps, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'roomId' })
   room: Room;
+
+  @Column({ type: 'uuid' })
+  roomId: string;
+
+  // @OneToMany(() => Token, (token) => token.map)
+  // tokens: Token[];
 
   @CreateDateColumn()
   createdAt: Date;

@@ -24,7 +24,7 @@ export class VttMapResponseDto {
       showGrid: vttmapEntity.showGrid,
       createdAt: vttmapEntity.createdAt,
       updatedAt: vttmapEntity.updatedAt,
-      roomId: vttmapEntity.room.id,
+      roomId: vttmapEntity.roomId,
     };
 
     return new VttMapResponseDto(message, vttMapDto);
