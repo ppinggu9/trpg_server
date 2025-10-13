@@ -68,7 +68,6 @@ export class Room {
   })
   creator: User | null;
 
-  // 이름혼란을 위해 vttmap으로 설정
   @OneToOne(() => VttMap, (vttmap) => vttmap.room, { nullable: true })
   vttmap: VttMap;
 }
