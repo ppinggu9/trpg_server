@@ -13,6 +13,7 @@ import { NpcModule } from './npc/npc.module';
 import { HttpModule } from '@nestjs/axios';
 import { S3Module } from './s3/s3.module';
 import { VttmapModule } from './vttmap/vttmap.module';
+import { TokenModule } from './token/token.module';
 
 @Module({
   imports: [
@@ -52,7 +53,7 @@ import { VttmapModule } from './vttmap/vttmap.module';
     HttpModule,
     S3Module,
     VttmapModule,
-    // TokenModule,
+    TokenModule,
   ],
   controllers: [AppController],
   providers: [AppService],

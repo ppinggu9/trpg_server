@@ -1,14 +1,14 @@
 import { PresignedUrlResponseDto } from '@/common/dto/presigned-url-response.dto';
 import { validateImageUpload } from '@/common/utils/validate-image-upload';
 import { S3Service } from '@/s3/s3.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { nanoid } from 'nanoid';
 import { Repository } from 'typeorm';
 import { VttMap } from './entities/vttmap.entity';
 import { VttMapValidatorService } from './vttmap-validator.service';
 import { CreateVttMapDto } from './dto/create-vttmap.dto';
-import { VTTMAP_MESSAGES } from './constants/vttmap.constants';
+import { VTTMAP_ERRORS, VTTMAP_MESSAGES } from './constants/vttmap.constants';
 import { UpdateVttMapDto } from './dto/update-vttmap.dto';
 
 @Injectable()
@@ -111,5 +111,17 @@ export class VttMapService {
     );
     await this.vttMapRepository.remove(vttMap);
     return { success: true };
+  }
+
+  //token에서 맵 조회시 쓴다.
+  async getMapWithRoom(mapId: string) {
+    const map = await this.vttMapRepository.findOne({
+      where: { id: mapId },
+      relations: ['room'],
+    });
+    if (!map) {
+      throw new NotFoundException(VTTMAP_ERRORS.NOT_FOUND);
+    }
+    return map;
   }
 }

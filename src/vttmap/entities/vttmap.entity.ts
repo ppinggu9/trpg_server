@@ -1,11 +1,13 @@
 import { GridType } from '@/common/enums/grid-type.enum';
 import { Room } from '@/room/entities/room.entity';
+import { Token } from '@/token/entities/token.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -41,8 +43,8 @@ export class VttMap {
   @Column({ type: 'uuid' })
   roomId: string;
 
-  // @OneToMany(() => Token, (token) => token.map)
-  // tokens: Token[];
+  @OneToMany(() => Token, (token) => token.map)
+  tokens: Token[];
 
   @CreateDateColumn()
   createdAt: Date;

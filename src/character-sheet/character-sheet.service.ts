@@ -134,4 +134,29 @@ export class CharacterSheetService {
 
     return { presignedUrl, publicUrl, key };
   }
+
+  // token에서 쓴다
+  async getCharacterSheetById(sheetId: number, requesterUserId: number) {
+    const sheet = await this.findSheetWithRelations(sheetId);
+    if (!sheet) {
+      throw new NotFoundException(CHARACTER_SHEET_ERRORS.SHEET_NOT_FOUND);
+    }
+    await this.validatorService.validateReadAccess(sheet, requesterUserId);
+    return sheet;
+  }
+
+  async isOwner(sheetId: number, userId: number): Promise<boolean> {
+    const sheet = await this.findSheetWithRelations(sheetId);
+    if (!sheet) {
+      return false;
+    }
+    return sheet.participant?.user?.id === userId;
+  }
+
+  private async findSheetWithRelations(sheetId: number) {
+    return await this.characterSheetRepository.findOne({
+      where: { id: sheetId },
+      relations: ['participant', 'participant.user'],
+    });
+  }
 }

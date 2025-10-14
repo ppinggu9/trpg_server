@@ -156,7 +156,7 @@ export class VttMapController {
       roomId,
       req.user.id,
     );
-    return vttMaps.map((map) => VttMapDto.fromEntity(map));
+    return vttMaps.map(VttMapDto.fromEntity);
   }
 
   @Patch(':mapId')
