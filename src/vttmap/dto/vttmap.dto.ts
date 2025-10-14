@@ -1,6 +1,6 @@
-// dto/map.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { GridType } from '@/common/enums/grid-type.enum';
+import { VttMap } from '../entities/vttmap.entity'; // 엔티티 import
 
 export class VttMapDto {
   @ApiProperty()
@@ -29,4 +29,18 @@ export class VttMapDto {
 
   @ApiProperty({ description: '연결된 방 ID' })
   roomId: string;
+
+  static fromEntity(entity: VttMap): VttMapDto {
+    return {
+      id: entity.id,
+      name: entity.name,
+      imageUrl: entity.imageUrl,
+      gridType: entity.gridType,
+      gridSize: entity.gridSize,
+      showGrid: entity.showGrid,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      roomId: entity.roomId,
+    };
+  }
 }
