@@ -109,7 +109,7 @@ export class VttMapService {
       vttMapId,
       userId,
     );
-    await this.vttMapRepository.remove(vttMap);
+    await this.vttMapRepository.softRemove(vttMap);
     return { success: true };
   }
 

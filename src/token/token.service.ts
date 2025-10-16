@@ -76,7 +76,10 @@ export class TokenService {
   }
 
   async deleteToken(tokenId: string, userId: number): Promise<void> {
-    await this.validator.validateMoveOrDeleteAccess(tokenId, userId);
-    await this.tokenRepository.delete(tokenId);
+    const token = await this.validator.validateMoveOrDeleteAccess(
+      tokenId,
+      userId,
+    );
+    await this.tokenRepository.softRemove(token);
   }
 }

@@ -17,6 +17,7 @@ import {
   signUpAndLogin,
   truncateAllTables,
 } from './utils/test.util';
+import { VttMap } from '@/vttmap/entities/vttmap.entity';
 
 describe('VttMapController (e2e)', () => {
   let app: INestApplication;
@@ -25,6 +26,7 @@ describe('VttMapController (e2e)', () => {
 
   let roomRepository: Repository<Room>;
   let userRepository: Repository<User>;
+  let vttMapRepository: Repository<VttMap>;
   let roomService: RoomService;
 
   let gmUser: User;
@@ -59,6 +61,9 @@ describe('VttMapController (e2e)', () => {
 
     roomRepository = module.get<Repository<Room>>(getRepositoryToken(Room));
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
+    vttMapRepository = module.get<Repository<VttMap>>(
+      getRepositoryToken(VttMap),
+    );
     roomService = module.get<RoomService>(RoomService);
   });
 
@@ -287,7 +292,7 @@ describe('VttMapController (e2e)', () => {
       createdMapId = res.body.vttMap.id;
     });
 
-    it('성공: GM이 특정 맵을 삭제할 수 있어야 한다', async () => {
+    it('성공: GM이 특정 맵을 Soft Delete할 수 있어야 한다', async () => {
       const deleteRes = await request(app.getHttpServer())
         .delete(`/vttmaps/${createdMapId}`)
         .set('Authorization', `Bearer ${gmToken}`)
@@ -295,11 +300,18 @@ describe('VttMapController (e2e)', () => {
 
       expect(deleteRes.body.success).toBe(true);
 
-      // 삭제 확인
       await request(app.getHttpServer())
         .get(`/vttmaps/${createdMapId}`)
         .set('Authorization', `Bearer ${gmToken}`)
         .expect(404);
+
+      const deletedMap = await vttMapRepository.findOne({
+        where: { id: createdMapId },
+        withDeleted: true,
+      });
+
+      expect(deletedMap).not.toBeNull();
+      expect(deletedMap!.deletedAt).toBeInstanceOf(Date);
     });
 
     it('실패: PLAYER가 맵을 삭제하려 할 경우 403', async () => {

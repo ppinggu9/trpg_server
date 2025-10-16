@@ -334,16 +334,23 @@ describe('NpcController (e2e)', () => {
       });
     });
 
-    it('성공: GM은 NPC를 삭제할 수 있어야 한다', async () => {
-      const response = await request(app.getHttpServer())
+    it('성공: GM은 NPC를 Soft Delete할 수 있음', async () => {
+      await request(app.getHttpServer())
+        .delete(`/npcs/${npc.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(200);
+    });
+
+    it('실패: Soft Delete된 NPC는 더 이상 조회되지 않음 (404)', async () => {
+      await request(app.getHttpServer())
         .delete(`/npcs/${npc.id}`)
         .set('Authorization', `Bearer ${gmToken}`)
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-
-      const deleted = await npcRepository.findOneBy({ id: npc.id });
-      expect(deleted).toBeNull();
+      await request(app.getHttpServer())
+        .get(`/npcs/${npc.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(404);
     });
   });
 

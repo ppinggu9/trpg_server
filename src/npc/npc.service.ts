@@ -73,7 +73,7 @@ export class NpcService {
     const npc = await this.findNpcOrFail(npcId);
 
     await this.validatorService.validateGmAccess(npc.roomId, userId);
-    await this.npcRepository.remove(npc);
+    await this.npcRepository.softRemove(npc);
     return { success: true };
   }
 

@@ -1,9 +1,11 @@
 import { GridType } from '@/common/enums/grid-type.enum';
 import { Room } from '@/room/entities/room.entity';
 import { Token } from '@/token/entities/token.entity';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -36,7 +38,7 @@ export class VttMap {
   @Column({ type: 'boolean', default: true })
   showGrid: boolean;
 
-  @ManyToOne(() => Room, (room) => room.vttmaps, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Room, (room) => room.vttmaps)
   @JoinColumn({ name: 'roomId' })
   room: Room;
 
@@ -46,9 +48,15 @@ export class VttMap {
   @OneToMany(() => Token, (token) => token.map)
   tokens: Token[];
 
-  @CreateDateColumn()
+  @ApiProperty({ description: '생성 시간' })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @ApiProperty({ description: '수정 시간' })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @ApiProperty({ description: '삭제 시간 (null이면 활성)' })
+  @DeleteDateColumn()
+  deletedAt: Date | null;
 }

@@ -7,6 +7,7 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { Room } from '@/room/entities/room.entity';
 import { TrpgSystem } from '@/common/enums/trpg-system.enum';
@@ -69,4 +70,8 @@ export class Npc {
   @ApiProperty({ description: '수정 시간' })
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @ApiProperty({ description: '삭제 시간 (null이면 활성)' })
+  @DeleteDateColumn()
+  deletedAt: Date | null;
 }

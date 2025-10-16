@@ -1,7 +1,9 @@
 import { VttMap } from '@/vttmap/entities/vttmap.entity';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -17,7 +19,7 @@ export class Token {
   @Column({ type: 'uuid' })
   mapId: string;
 
-  @ManyToOne(() => VttMap, (map) => map.tokens, { onDelete: 'CASCADE' })
+  @ManyToOne(() => VttMap, (map) => map.tokens)
   @JoinColumn({ name: 'mapId' })
   map: VttMap;
 
@@ -42,9 +44,15 @@ export class Token {
   @Column({ type: 'int', nullable: true })
   npcId?: number;
 
-  @CreateDateColumn()
+  @ApiProperty({ description: '생성 시간' })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @ApiProperty({ description: '수정 시간' })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @ApiProperty({ description: '삭제 시간 (null이면 활성)' })
+  @DeleteDateColumn()
+  deletedAt: Date | null;
 }

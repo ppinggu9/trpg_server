@@ -189,8 +189,8 @@ export class VttMapController {
 
   @Delete(':mapId')
   @ApiOperation({
-    summary: 'VTT 맵 삭제',
-    description: 'GM 전용. 특정 맵을 삭제합니다.',
+    summary: 'VTT 맵 삭제 (Soft Delete)',
+    description: 'GM 전용. 특정 맵을 논리적으로 삭제합니다.',
   })
   @ApiParam({ name: 'mapId', type: 'string', format: 'uuid' })
   @ApiOkResponse({

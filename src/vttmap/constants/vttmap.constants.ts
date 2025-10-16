@@ -6,7 +6,7 @@ export const VTTMAP_MESSAGES = {
 } as const;
 
 export const VTTMAP_ERRORS = {
-  NOT_FOUND: '맵을 찾을 수 없습니다.',
+  NOT_FOUND: '맵을 찾을 수 없습니다. (존재하지 않거나 이미 삭제된 경우 포함)',
   ALREADY_EXISTS: '이미 맵이 존재합니다.',
   NOT_ROOM_CREATOR: '방장(GM)만 맵을 설정할 수 있습니다.',
   PARTICIPANT_NOT_IN_ROOM: '해당 방에 참여하지 않았습니다.',

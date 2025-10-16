@@ -207,8 +207,8 @@ export class NpcController {
 
   @Delete(':npcId')
   @ApiOperation({
-    summary: 'NPC 삭제',
-    description: 'NPC를 삭제합니다. GM 전용 기능입니다.',
+    summary: 'NPC 삭제 (Soft Delete)',
+    description: 'NPC가 성공적으로 삭제됨 (논리적 삭제)',
   })
   @ApiParam({
     name: 'npcId',
