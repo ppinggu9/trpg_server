@@ -15,7 +15,12 @@ export const createVttMapEntity = (options: Partial<VttMap> = {}): VttMap => {
   vttMap.gridSize = options.gridSize ?? faker.number.int({ min: 10, max: 200 });
   vttMap.showGrid = options.showGrid ?? faker.datatype.boolean();
 
-  vttMap.room = options.room ?? createRoomEntity();
+  if (options.roomId) {
+    vttMap.roomId = options.roomId;
+  } else {
+    vttMap.room = options.room ?? createRoomEntity();
+  }
+
   vttMap.createdAt = options.createdAt ?? new Date();
   vttMap.updatedAt = options.updatedAt ?? new Date();
 

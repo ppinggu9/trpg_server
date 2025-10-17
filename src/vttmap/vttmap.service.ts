@@ -10,6 +10,7 @@ import { VttMapValidatorService } from './vttmap-validator.service';
 import { CreateVttMapDto } from './dto/create-vttmap.dto';
 import { VTTMAP_ERRORS, VTTMAP_MESSAGES } from './constants/vttmap.constants';
 import { UpdateVttMapDto } from './dto/update-vttmap.dto';
+import { RoomService } from '@/room/room.service';
 
 @Injectable()
 export class VttMapService {
@@ -18,6 +19,7 @@ export class VttMapService {
     private readonly vttMapRepository: Repository<VttMap>,
     private readonly vttMapValidatorService: VttMapValidatorService,
     private readonly s3Service: S3Service,
+    private readonly roomService: RoomService,
   ) {}
 
   async getPresignedUrlForVttMapImage(
@@ -47,6 +49,8 @@ export class VttMapService {
   ): Promise<{ message: string; vttMap: VttMap }> {
     await this.vttMapValidatorService.validateGmAccess(roomId, userId);
 
+    const room = await this.roomService.getRoomById(roomId);
+
     const vttMap = this.vttMapRepository.create({
       name: dto.name,
       imageUrl: dto.imageUrl,
@@ -54,10 +58,10 @@ export class VttMapService {
       gridSize: dto.gridSize,
       showGrid: dto.showGrid,
       roomId,
+      room,
     });
 
     const savedVttMap = await this.vttMapRepository.save(vttMap);
-
     return {
       message: VTTMAP_MESSAGES.CREATED,
       vttMap: savedVttMap,

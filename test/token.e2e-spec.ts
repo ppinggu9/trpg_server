@@ -275,16 +275,20 @@ describe('TokenController (e2e)', () => {
   });
 
   describe('UC-02: 토큰 조회', () => {
-    let token: Token;
+    let tokenId: string;
+
     beforeEach(async () => {
-      token = await tokenRepository.save(
-        createTokenEntity({
-          mapId: testMap.id,
-          name: 'Test Token',
-          x: 100,
-          y: 100,
-        }),
-      );
+      const createDto = createTokenDto({
+        name: 'Test Token',
+        x: 100,
+        y: 100,
+      });
+      const res = await request(app.getHttpServer())
+        .post(`/tokens/maps/${testMap.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send(createDto)
+        .expect(201);
+      tokenId = res.body.id;
     });
 
     it('성공: GM은 맵의 모든 토큰을 조회할 수 있어야 한다', async () => {
@@ -292,9 +296,8 @@ describe('TokenController (e2e)', () => {
         .get(`/tokens/maps/${testMap.id}`)
         .set('Authorization', `Bearer ${gmToken}`)
         .expect(200);
-      expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBe(1);
-      expect(res.body[0].id).toBe(token.id);
+      expect(res.body[0].id).toBe(tokenId);
     });
 
     it('성공: 플레이어도 맵의 모든 토큰을 조회할 수 있어야 한다', async () => {
@@ -320,11 +323,12 @@ describe('TokenController (e2e)', () => {
   });
 
   describe('UC-03: 토큰 이동 (업데이트)', () => {
-    let characterToken: Token;
-    let npcToken: Token;
-    let plainToken: Token;
+    let characterTokenId: string;
+    let npcTokenId: string;
+    let plainTokenId: string;
 
     beforeEach(async () => {
+      // 캐릭터 시트 생성
       const sheet = await characterSheetRepository.save(
         createCharacterSheet({
           participant: playerParticipant,
@@ -339,38 +343,34 @@ describe('TokenController (e2e)', () => {
         }),
       );
 
-      characterToken = await tokenRepository.save(
-        createTokenEntity({
-          mapId: testMap.id,
-          name: 'Char Token',
-          x: 100,
-          y: 100,
-          characterSheetId: Number(sheet.id),
-        }),
-      );
-      npcToken = await tokenRepository.save(
-        createTokenEntity({
-          mapId: testMap.id,
-          name: 'NPC Token',
-          x: 200,
-          y: 200,
-          npcId: Number(npc.id),
-        }),
-      );
-      plainToken = await tokenRepository.save(
-        createTokenEntity({
-          mapId: testMap.id,
-          name: 'Plain Token',
-          x: 300,
-          y: 300,
-        }),
-      );
+      const charRes = await request(app.getHttpServer())
+        .post(`/tokens/maps/${testMap.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send(
+          createTokenDto({ name: 'Char', characterSheetId: Number(sheet.id) }),
+        )
+        .expect(201);
+      characterTokenId = charRes.body.id;
+
+      const npcRes = await request(app.getHttpServer())
+        .post(`/tokens/maps/${testMap.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send(createTokenDto({ name: 'NPC', npcId: Number(npc.id) }))
+        .expect(201);
+      npcTokenId = npcRes.body.id;
+
+      const plainRes = await request(app.getHttpServer())
+        .post(`/tokens/maps/${testMap.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send(createTokenDto({ name: 'Plain' }))
+        .expect(201);
+      plainTokenId = plainRes.body.id;
     });
 
     it('성공: GM은 모든 토큰을 이동할 수 있어야 한다', async () => {
       const updateDto = updateTokenDto({ x: 999, y: 888 });
       await request(app.getHttpServer())
-        .patch(`/tokens/${plainToken.id}`)
+        .patch(`/tokens/${plainTokenId}`)
         .set('Authorization', `Bearer ${gmToken}`)
         .send(updateDto)
         .expect(200)
@@ -383,7 +383,7 @@ describe('TokenController (e2e)', () => {
     it('성공: 플레이어는 자신의 캐릭터 토큰만 이동할 수 있어야 한다', async () => {
       const updateDto = updateTokenDto({ x: 500, y: 500 });
       await request(app.getHttpServer())
-        .patch(`/tokens/${characterToken.id}`)
+        .patch(`/tokens/${characterTokenId}`)
         .set('Authorization', `Bearer ${playerToken}`)
         .send(updateDto)
         .expect(200)
@@ -394,7 +394,7 @@ describe('TokenController (e2e)', () => {
 
     it('실패: 플레이어는 NPC 토큰을 이동할 수 없음 (403)', async () => {
       await request(app.getHttpServer())
-        .patch(`/tokens/${npcToken.id}`)
+        .patch(`/tokens/${npcTokenId}`)
         .set('Authorization', `Bearer ${playerToken}`)
         .send(updateTokenDto({ x: 0, y: 0 }))
         .expect(403)
@@ -407,7 +407,7 @@ describe('TokenController (e2e)', () => {
 
     it('실패: 플레이어는 일반 토큰을 이동할 수 없음 (403)', async () => {
       await request(app.getHttpServer())
-        .patch(`/tokens/${plainToken.id}`)
+        .patch(`/tokens/${plainTokenId}`)
         .set('Authorization', `Bearer ${playerToken}`)
         .send(updateTokenDto({ x: 0, y: 0 }))
         .expect(403)
@@ -449,29 +449,28 @@ describe('TokenController (e2e)', () => {
   });
 
   describe('UC-04: 토큰 삭제', () => {
-    let token: Token;
+    let tokenId: string;
+
     beforeEach(async () => {
-      token = await tokenRepository.save(
-        createTokenEntity({
-          mapId: testMap.id,
-          name: 'To Delete',
-          x: 0,
-          y: 0,
-        }),
-      );
+      const res = await request(app.getHttpServer())
+        .post(`/tokens/maps/${testMap.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send(createTokenDto({ name: 'To Delete' }))
+        .expect(201);
+      tokenId = res.body.id;
     });
 
     it('성공: GM은 토큰을 Soft Delete할 수 있어야 한다', async () => {
       await request(app.getHttpServer())
-        .delete(`/tokens/${token.id}`)
+        .delete(`/tokens/${tokenId}`)
         .set('Authorization', `Bearer ${gmToken}`)
         .expect(204);
 
-      const deleted = await tokenRepository.findOneBy({ id: token.id });
+      const deleted = await tokenRepository.findOneBy({ id: tokenId });
       expect(deleted).toBeNull();
 
       const softDeleted = await tokenRepository.findOne({
-        where: { id: token.id },
+        where: { id: tokenId },
         withDeleted: true, // 삭제된 것도 포함
       });
       expect(softDeleted).not.toBeNull();
@@ -480,7 +479,7 @@ describe('TokenController (e2e)', () => {
 
     it('실패: 플레이어는 일반 토큰 삭제 불가 (403)', async () => {
       await request(app.getHttpServer())
-        .delete(`/tokens/${token.id}`)
+        .delete(`/tokens/${tokenId}`)
         .set('Authorization', `Bearer ${playerToken}`)
         .expect(403)
         .expect((res) => {

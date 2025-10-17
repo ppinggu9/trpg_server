@@ -49,7 +49,7 @@ export class VttMapController {
   @Post('rooms/:roomId/vttmaps')
   @ApiOperation({
     summary: 'VTT 맵 생성',
-    description: '방장(GM)만 VTT 맵을 생성할 수 있습니다. 방당 여러 맵 허용.',
+    description: 'GM만 VTT 맵을 생성할 수 있습니다. 방당 여러 맵 허용.',
   })
   @ApiParam({
     name: 'roomId',
