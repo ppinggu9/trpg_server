@@ -15,8 +15,11 @@ import { MessageResponseDto } from './dto/message-response.dto';
 import { jwtValidatedOutputDto } from '@/auth/types/jwt-payload.dto';
 import { WsAuthMiddleware } from '@/auth/ws-auth.middleware';
 import { CHAT_ERRORS } from './constant/chat.constant';
+import { Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 @WebSocketGateway(11123, {
+  namespace: '/chat',
   cors: {
     origin: '*',
     credentials: true,
@@ -31,6 +34,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly connectedUsers = new Map<number, Set<number>>();
 
   constructor(
+    @Inject(ConfigService) private readonly configService: ConfigService,
     private readonly chatService: ChatService,
     private readonly wsAuthMiddleware: WsAuthMiddleware,
   ) {}

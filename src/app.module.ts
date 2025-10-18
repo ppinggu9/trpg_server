@@ -14,6 +14,7 @@ import { HttpModule } from '@nestjs/axios';
 import { S3Module } from './s3/s3.module';
 import { VttmapModule } from './vttmap/vttmap.module';
 import { TokenModule } from './token/token.module';
+import { VttModule } from './vtt/vtt.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { TokenModule } from './token/token.module';
     S3Module,
     VttmapModule,
     TokenModule,
+    VttModule,
   ],
   controllers: [AppController],
   providers: [AppService],

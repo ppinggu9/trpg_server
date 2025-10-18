@@ -55,8 +55,8 @@ export const createTokenEntity = (options: Partial<Token> = {}): Token => {
   token.y = options.y ?? faker.number.float({ min: 0, max: 1000 });
   token.scale = options.scale ?? 1.0;
   token.imageUrl = options.imageUrl ?? faker.image.url();
-  token.characterSheetId = options.characterSheetId;
-  token.npcId = options.npcId;
+  token.characterSheetId = options.characterSheetId ?? null;
+  token.npcId = options.npcId ?? null;
   token.createdAt = options.createdAt ?? faker.date.past();
   token.updatedAt = options.updatedAt ?? faker.date.recent();
 

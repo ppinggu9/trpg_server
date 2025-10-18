@@ -67,7 +67,7 @@ describe('ChatGateway (e2e) - WebSocket', () => {
     .fill('')
     .map(() => createUserDto());
 
-  const GATEWAY_URL = 'http://localhost:11123'; // Gateway 포트와 네임스페이스
+  const GATEWAY_URL = 'http://localhost:11123/chat'; // Gateway 포트와 네임스페이스
 
   beforeAll(async () => {
     // 앱 모듈 컴파일

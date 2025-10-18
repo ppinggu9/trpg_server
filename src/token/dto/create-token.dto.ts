@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsInt } from 'class-validator';
 
 export class CreateTokenDto {
   @IsString()
@@ -18,11 +18,11 @@ export class CreateTokenDto {
   @IsOptional()
   imageUrl?: string;
 
-  @IsNumber()
+  @IsInt()
   @IsOptional()
-  characterSheetId?: number;
+  characterSheetId?: number | null;
 
-  @IsNumber()
+  @IsInt()
   @IsOptional()
-  npcId?: number;
+  npcId?: number | null;
 }

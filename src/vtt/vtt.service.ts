@@ -1,0 +1,35 @@
+// src/vtt/vtt.service.ts
+import { Injectable } from '@nestjs/common';
+import { TokenValidatorService } from '@/token/token-validator.service';
+import { TokenService } from '@/token/token.service';
+import { VttMapService } from '@/vttmap/vttmap.service';
+
+@Injectable()
+export class VttService {
+  constructor(
+    private readonly validator: TokenValidatorService,
+    private readonly tokenService: TokenService,
+    private readonly vttMapService: VttMapService,
+  ) {}
+
+  async validateMapAccess(mapId: string, userId: number) {
+    return this.validator.validateMapAccess(mapId, userId);
+  }
+
+  async validateTokenMoveAccess(tokenId: string, userId: number) {
+    return this.validator.validateMoveOrDeleteAccess(tokenId, userId);
+  }
+
+  async moveToken(
+    tokenId: string,
+    { x, y }: { x: number; y: number },
+    userId: number,
+  ) {
+    return this.tokenService.updateToken(tokenId, { x, y }, userId);
+  }
+
+  async updateMap(mapId: string, updates: Record<string, any>, userId: number) {
+    // VttMapService는 이미 GM 권한 체크 포함
+    return this.vttMapService.updateVttMap(mapId, userId, updates);
+  }
+}

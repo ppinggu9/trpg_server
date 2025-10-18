@@ -17,6 +17,6 @@ import { TokenValidatorService } from './token-validator.service';
   ],
   controllers: [TokenController],
   providers: [TokenService, TokenValidatorService],
-  exports: [TokenService],
+  exports: [TokenService, TokenValidatorService],
 })
 export class TokenModule {}
