@@ -272,6 +272,15 @@ export class NpcController {
     type?: NpcType,
   ) {
     const npcs = await this.npcService.getNpcsByRoom(roomId, req.user.id, type);
+    // console.log(
+    //   `[DEBUG getNpcsByRoom] Found ${npcs.length} NPCs for room ${roomId}, user ${req.user.id}, type filter: ${type}`,
+    //   npcs.map((n) => ({
+    //     id: n.id,
+    //     type: n.type,
+    //     isPublic: n.isPublic,
+    //     roomId: n.roomId,
+    //   })),
+    // );
     return npcs.map(NpcResponseDto.fromEntity);
   }
 }

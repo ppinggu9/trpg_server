@@ -39,6 +39,10 @@ export class NpcResponseDto {
   updatedAt: Date;
 
   static fromEntity(entity: Npc): NpcResponseDto {
+    // console.log(
+    //   `[NPC DTO DEBUG] NPC ID ${entity.id} loaded type:`,
+    //   entity.type,
+    // );
     return {
       id: entity.id,
       data: entity.data,

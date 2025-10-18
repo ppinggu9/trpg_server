@@ -108,20 +108,14 @@ export class NpcService {
       userId,
     );
 
-    const query = this.npcRepository
-      .createQueryBuilder('npc')
-      .where('npc.roomId = :roomId', { roomId });
-
+    const where: any = { roomId };
     if (participant.role !== ParticipantRole.GM) {
-      query.andWhere('npc.isPublic = true');
+      where.isPublic = true;
     }
-
     if (type !== undefined) {
-      query.andWhere('npc.type = :type', { type });
+      where.type = type;
     }
 
-    const npcs = await query.getMany();
-
-    return npcs;
+    return this.npcRepository.find({ where });
   }
 }

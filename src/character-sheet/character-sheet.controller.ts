@@ -159,6 +159,16 @@ export class CharacterSheetController {
       participantId,
       req.user.id,
     );
+    console.log(
+      `[DEBUG CharacterSheet.findOne] Loaded sheet for participant ${participantId}, requester ${req.user.id}:`,
+      {
+        id: foundSheet.id,
+        participantId: foundSheet.participant?.id,
+        ownerId: foundSheet.participant?.user?.id,
+        isPublic: foundSheet.isPublic,
+        trpgType: foundSheet.trpgType,
+      },
+    );
     return CharacterSheetResponseDto.fromEntity(foundSheet);
   }
 
