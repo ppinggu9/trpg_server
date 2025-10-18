@@ -157,6 +157,11 @@ export class RoomParticipantService {
 
     participant.role = newRole;
     await this.roomParticipantRepository.save(participant);
+
+    // console.log(
+    //   `[DEBUG] Updated participant ${participantId} role to:`,
+    //   newRole,
+    // );
   }
 
   // 밑에 2개는 charactersheet에서 권한여부를 위해 사용

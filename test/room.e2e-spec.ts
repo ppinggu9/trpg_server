@@ -716,6 +716,48 @@ describe('Room API (e2e)', () => {
       );
     });
 
+    it('역할 변경 후 방 정보를 다시 조회했을 때도 GM으로 표시되어야 함', async () => {
+      await request(app.getHttpServer())
+        .patch(`/rooms/${testRoomId}/participants/${participantUserId}/role`)
+        .set(getAuthHeaders(creatorToken))
+        .send({ role: ParticipantRole.GM })
+        .expect(200);
+
+      const getResponse = await request(app.getHttpServer())
+        .get(`/rooms/${testRoomId}`)
+        .set(getAuthHeaders(creatorToken))
+        .expect(200);
+
+      // 3. GM으로 표시되는지 확인
+      const targetParticipant = getResponse.body.participants.find(
+        (p) => p.id === participantUserId,
+      );
+      expect(targetParticipant).toBeDefined();
+      expect(targetParticipant.role).toBe(ParticipantRole.GM);
+    });
+
+    it('역할 변경 후 참여자 목록 조회 시에도 GM으로 표시되어야 함', async () => {
+      // 1. 역할 변경
+      await request(app.getHttpServer())
+        .patch(`/rooms/${testRoomId}/participants/${participantUserId}/role`)
+        .set(getAuthHeaders(creatorToken))
+        .send({ role: ParticipantRole.GM })
+        .expect(200);
+
+      // 2. 참여자 목록 조회
+      const participantsResponse = await request(app.getHttpServer())
+        .get(`/rooms/${testRoomId}/participants`)
+        .set(getAuthHeaders(creatorToken))
+        .expect(200);
+
+      expect(participantsResponse.body).toContainEqual(
+        expect.objectContaining({
+          id: participantUserId,
+          role: ParticipantRole.GM,
+        }),
+      );
+    });
+
     it('다양한 유효하지 않은 역할 값으로 변경 시도 - 실패', async () => {
       const invalidRoleCases = [
         { role: null, expectedMessage: ROOM_ERRORS.INVALID_PARTICIPANT_ROLE },
@@ -821,6 +863,24 @@ describe('Room API (e2e)', () => {
           }),
         ]),
       });
+    });
+
+    it('응답에 creatorId가 포함되고, 방장의 실제 ID와 일치해야 함', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/rooms/${testRoomId}`)
+        .set(getAuthHeaders(creatorToken))
+        .expect(200);
+
+      expect(response.body).toHaveProperty('creatorId');
+      expect(typeof response.body.creatorId).toBe('number');
+
+      const creator = await userRepository.findOne({
+        where: { createdRoom: { id: testRoomId } },
+        relations: { createdRoom: true },
+      });
+
+      expect(response.body.creatorId).toBe(creator.id);
+      expect(response.body.creatorNickname).toBe(creator.nickname);
     });
 
     it('존재하지 않는 방 ID로 조회 시도 - 실패', async () => {

@@ -34,6 +34,9 @@ export class RoomResponseDto {
   })
   participants: RoomParticipantDto[];
 
+  @ApiProperty({ description: '방장 사용자 ID' })
+  creatorId: number;
+
   @ApiProperty({ description: '방장 닉네임' })
   creatorNickname: string;
 
@@ -41,12 +44,16 @@ export class RoomResponseDto {
     const participantsData =
       room.participants
         ?.filter((p) => p.leftAt === null)
-        .map((p) => ({
-          userId: p.user.id,
-          name: p.user.name,
-          nickname: p.user.nickname,
-          role: p.role,
-        })) || [];
+        .map((p) => {
+          // console.log(`[DTO] User ${p.user.id} loaded role:`, p.role);
+
+          return {
+            userId: p.user.id,
+            name: p.user.name,
+            nickname: p.user.nickname,
+            role: p.role,
+          };
+        }) || [];
 
     return {
       id: room.id,
@@ -63,6 +70,7 @@ export class RoomResponseDto {
         nickname: p.nickname ?? '익명',
         role: p.role,
       })),
+      creatorId: room.creator?.id,
       creatorNickname: room.creator.nickname,
     };
   }

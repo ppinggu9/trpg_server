@@ -310,14 +310,10 @@ export class RoomService {
 
   // 방 참가자 목록 조회
   async getRoomWithParticipants(roomId: string): Promise<RoomResponseDto> {
-    // 단일 쿼리로 방 정보와 참여자 정보 모두 조회
-    const room = await this.roomRepository
-      .createQueryBuilder('room')
-      .where('room.id = :roomId', { roomId })
-      .leftJoinAndSelect('room.participants', 'participants')
-      .leftJoinAndSelect('participants.user', 'user')
-      .leftJoinAndSelect('room.creator', 'creator')
-      .getOne();
+    const room = await this.roomRepository.findOne({
+      where: { id: roomId },
+      relations: ['creator', 'participants', 'participants.user'],
+    });
 
     if (!room) {
       throw new NotFoundException({
@@ -331,14 +327,10 @@ export class RoomService {
 
   // 보조 메서드: 비즈니스 로직이 아닌 단순 생성/조회
   private async findActiveRoom(roomId: string): Promise<Room> {
-    const room = await this.roomRepository
-      .createQueryBuilder('room')
-      .addSelect('room.password')
-      .where('room.id = :roomId', { roomId })
-      .leftJoinAndSelect('room.participants', 'participants')
-      .leftJoinAndSelect('participants.user', 'user')
-      .leftJoinAndSelect('room.creator', 'creator')
-      .getOne();
+    const room = await this.roomRepository.findOne({
+      where: { id: roomId },
+      relations: ['creator', 'participants', 'participants.user'],
+    });
 
     if (!room) {
       throw new NotFoundException({
@@ -347,6 +339,7 @@ export class RoomService {
         details: { roomId },
       });
     }
+
     return room;
   }
 
