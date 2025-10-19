@@ -25,7 +25,6 @@ import {
   ApiOperation,
   ApiParam,
   ApiQuery,
-  ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -38,6 +37,7 @@ import { CreatePresignedUrlDto } from '@/common/dto/create-presigned-url.dto';
 import { PresignedUrlResponseDto } from '@/common/dto/presigned-url-response.dto';
 import { UpdateVttMapDto } from './dto/update-vttmap.dto';
 import { VTTMAP_ERRORS, VTTMAP_MESSAGES } from './constants/vttmap.constants';
+import { DeleteVttMapResponseDto } from './dto/delete-vttmap-response.dto';
 
 @ApiTags('VttMaps')
 @UseGuards(JwtAuthGuard)
@@ -49,7 +49,8 @@ export class VttMapController {
   @Post('rooms/:roomId/vttmaps')
   @ApiOperation({
     summary: 'VTT 맵 생성',
-    description: 'GM만 VTT 맵을 생성할 수 있습니다. 방당 여러 맵 허용.',
+    description:
+      'GM만 VTT 맵을 생성할 수 있습니다. 방당 여러 맵 허용. **이름 중복 허용**.',
   })
   @ApiParam({
     name: 'roomId',
@@ -84,18 +85,14 @@ export class VttMapController {
   @ApiOperation({
     summary: 'VTT 맵 이미지 업로드용 Presigned URL 발급',
     description:
-      'GM 전용 vttmap 이미지를 업로드하기 위한 Presigned URL을 밠급합니다.\n' +
+      'GM 전용 vttmap 이미지를 업로드하기 위한 Presigned URL을 발급합니다.\n' +
       '1. 이 엔드포인트로 `presignedUrl`과 `publicUrl`을 받습니다.\n' +
       '2. 클라이언트가 `presignedUrl`로 S3에 이미지 PUT 요청\n' +
-      '3. 성공 시, **반드시 `publicUrl`을 vttmap의 imageUrl 필드에 저장**하세요.\n' +
-      '※ `data`는 JSONB 필드로, 동적으로 모든 TRPG 데이터를 저장할 수 있습니다.',
+      '3. 성공 시, **반드시 `publicUrl`을 vttmap의 imageUrl 필드에 저장**하세요.',
   })
   @ApiParam({ name: 'roomId', type: 'string', format: 'uuid' })
   @ApiBody({ type: CreatePresignedUrlDto })
-  @ApiResponse({
-    status: 201,
-    type: PresignedUrlResponseDto,
-  })
+  @ApiCreatedResponse({ type: PresignedUrlResponseDto }) // ✅ 일관성 유지
   @ApiBadRequestResponse({ description: '잘못된 이미지 형식' })
   @ApiUnauthorizedResponse({ description: '인증되지 않음' })
   @ApiForbiddenResponse({ description: VTTMAP_ERRORS.NOT_ROOM_CREATOR })
@@ -199,13 +196,7 @@ export class VttMapController {
   @ApiParam({ name: 'mapId', type: 'string', format: 'uuid' })
   @ApiOkResponse({
     description: '맵 삭제 성공',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        message: { type: 'string', example: '맵이 삭제되었습니다.' },
-      },
-    },
+    type: DeleteVttMapResponseDto,
   })
   @ApiUnauthorizedResponse({ description: '인증되지 않음' })
   @ApiForbiddenResponse({ description: VTTMAP_ERRORS.NOT_ROOM_CREATOR })
@@ -215,9 +206,6 @@ export class VttMapController {
     @Req() req: RequestWithUser,
   ) {
     await this.vttMapService.deleteVttMap(mapId, req.user.id);
-    return {
-      success: true,
-      message: '맵이 삭제되었습니다.',
-    };
+    return new DeleteVttMapResponseDto(); // ✅ 명확한 반환
   }
 }

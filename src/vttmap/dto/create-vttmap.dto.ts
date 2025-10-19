@@ -2,6 +2,7 @@ import { GridType } from '@/common/enums/grid-type.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { VTTMAP_ERRORS } from '../constants/vttmap.constants';
+import { Transform } from 'class-transformer';
 
 export class CreateVttMapDto {
   @ApiProperty({
@@ -11,6 +12,9 @@ export class CreateVttMapDto {
   })
   @IsString()
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() || undefined : value,
+  )
   name?: string;
 
   @ApiProperty({
@@ -20,6 +24,9 @@ export class CreateVttMapDto {
   })
   @IsString()
   @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() || undefined : value,
+  )
   imageUrl?: string;
 
   @ApiProperty({

@@ -15,6 +15,7 @@ import { S3Module } from './s3/s3.module';
 import { VttmapModule } from './vttmap/vttmap.module';
 import { TokenModule } from './token/token.module';
 import { VttModule } from './vtt/vtt.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { VttModule } from './vtt/vtt.module';
     VttmapModule,
     TokenModule,
     VttModule,
+    EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService],

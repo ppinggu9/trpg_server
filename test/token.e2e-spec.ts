@@ -238,6 +238,22 @@ describe('TokenController (e2e)', () => {
       expect(res.body.characterSheetId).toBeNull();
     });
 
+    it('실패: x가 문자열이면 400 에러', async () => {
+      await request(app.getHttpServer())
+        .post(`/tokens/maps/${testMap.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ name: 'Bad', x: 'not-a-number', y: 100 })
+        .expect(400);
+    });
+
+    it('실패: name이 누락되면 400 에러', async () => {
+      await request(app.getHttpServer())
+        .post(`/tokens/maps/${testMap.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ x: 100, y: 100 })
+        .expect(400);
+    });
+
     it('실패: 캐릭터 시트와 NPC를 동시에 연결할 수 없음 (400)', async () => {
       const sheet = await characterSheetRepository.save(
         createCharacterSheet({
@@ -271,6 +287,116 @@ describe('TokenController (e2e)', () => {
             TOKEN_ERROR_MESSAGES[TokenErrorCode.BOTH_SHEET_AND_NPC],
           );
         });
+    });
+    describe('플레이어 토큰 생성 권한', () => {
+      it('성공: 플레이어가 자신의 캐릭터 시트에 연결된 토큰을 생성할 수 있어야 한다', async () => {
+        // 1. 플레이어의 캐릭터 시트 생성 (GM이 생성한 방에 참여 중인 플레이어)
+        const sheet = await characterSheetRepository.save(
+          createCharacterSheet({
+            participant: playerParticipant,
+            trpgType: TrpgSystem.DND5E,
+            data: { name: 'Player Hero' },
+            isPublic: false,
+          }),
+        );
+
+        // 2. 플레이어가 해당 시트로 토큰 생성 요청
+        const createDto = createTokenDto({
+          name: 'My Hero Token',
+          x: 200,
+          y: 300,
+          characterSheetId: Number(sheet.id),
+        });
+
+        const res = await request(app.getHttpServer())
+          .post(`/tokens/maps/${testMap.id}`)
+          .set('Authorization', `Bearer ${playerToken}`)
+          .send(createDto)
+          .expect(201);
+
+        expect(res.body.characterSheetId).toBe(Number(sheet.id));
+        expect(res.body.npcId).toBeNull();
+        expect(res.body.mapId).toBe(testMap.id);
+      });
+
+      it('실패: 플레이어가 일반 토큰(이미지만 있는)을 생성하려 하면 403 에러', async () => {
+        const createDto = createTokenDto({
+          name: 'Plain Chest',
+          x: 100,
+          y: 100,
+          imageUrl: 'https://example.com/chest.png',
+        });
+
+        await request(app.getHttpServer())
+          .post(`/tokens/maps/${testMap.id}`)
+          .set('Authorization', `Bearer ${playerToken}`)
+          .send(createDto)
+          .expect(403)
+          .expect((res) => {
+            expect(res.body.message).toBe(
+              '플레이어는 자신의 캐릭터 시트 토큰만 생성할 수 있습니다.',
+            );
+          });
+      });
+
+      it('실패: 플레이어가 NPC 토큰을 생성하려 하면 403 에러', async () => {
+        const npc = await npcRepository.save(
+          createNpcEntity({
+            room: testRoom,
+            trpgType: TrpgSystem.DND5E,
+            data: { name: 'Orc' },
+            isPublic: true,
+            type: NpcType.NPC,
+          }),
+        );
+
+        const createDto = createTokenDto({
+          name: 'Orc Token',
+          x: 400,
+          y: 500,
+          npcId: Number(npc.id),
+        });
+
+        await request(app.getHttpServer())
+          .post(`/tokens/maps/${testMap.id}`)
+          .set('Authorization', `Bearer ${playerToken}`)
+          .send(createDto)
+          .expect(403)
+          .expect((res) => {
+            expect(res.body.message).toBe(
+              '플레이어는 자신의 캐릭터 시트 토큰만 생성할 수 있습니다.',
+            );
+          });
+      });
+
+      it('실패: 플레이어가 다른 플레이어의 캐릭터 시트로 토큰을 생성하려 하면 403 에러', async () => {
+        // 다른 플레이어의 캐릭터 시트 생성
+        const otherSheet = await characterSheetRepository.save(
+          createCharacterSheet({
+            participant: otherPlayerParticipant,
+            trpgType: TrpgSystem.DND5E,
+            data: { name: 'Other Hero' },
+          }),
+        );
+
+        const createDto = createTokenDto({
+          name: 'Impersonation Token',
+          x: 0,
+          y: 0,
+          characterSheetId: Number(otherSheet.id),
+        });
+
+        await request(app.getHttpServer())
+          .post(`/tokens/maps/${testMap.id}`)
+          .set('Authorization', `Bearer ${playerToken}`)
+          .send(createDto)
+          .expect(403)
+          .expect((res) => {
+            expect(res.body.message).toBe(
+              TOKEN_ERROR_MESSAGES[TokenErrorCode.NO_MOVE_PERMISSION],
+            );
+          });
+      });
     });
   });
 
@@ -306,6 +432,26 @@ describe('TokenController (e2e)', () => {
         .set('Authorization', `Bearer ${playerToken}`)
         .expect(200);
       expect(res.body.length).toBe(1);
+    });
+
+    it('성공: Soft Delete된 토큰은 조회되지 않음', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/tokens/maps/${testMap.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send(createTokenDto({ name: 'To Hide' }))
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .delete(`/tokens/${res.body.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(204);
+
+      const list = await request(app.getHttpServer())
+        .get(`/tokens/maps/${testMap.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(200);
+
+      expect(list.body.some((t: any) => t.id === res.body.id)).toBe(false);
     });
 
     it('실패: 방에 참여하지 않은 사용자는 조회 불가 (403)', async () => {
@@ -392,6 +538,42 @@ describe('TokenController (e2e)', () => {
         });
     });
 
+    it('성공: GM은 다른 플레이어의 캐릭터 토큰도 이동 가능', async () => {
+      const otherSheet = await characterSheetRepository.save(
+        createCharacterSheet({
+          participant: otherPlayerParticipant,
+          trpgType: TrpgSystem.DND5E,
+        }),
+      );
+      const otherToken = await tokenRepository.save(
+        createTokenEntity({
+          mapId: testMap.id,
+          characterSheetId: Number(otherSheet.id),
+        }),
+      );
+
+      await request(app.getHttpServer())
+        .patch(`/tokens/${otherToken.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ x: 999, y: 999 })
+        .expect(200);
+    });
+
+    it('성공: GM이 토큰의 name과 imageUrl을 부분 업데이트 가능', async () => {
+      const updateDto = {
+        name: 'Updated Chest',
+        imageUrl: 'https://new.com/token.png',
+      };
+      const res = await request(app.getHttpServer())
+        .patch(`/tokens/${plainTokenId}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send(updateDto)
+        .expect(200);
+
+      expect(res.body.name).toBe('Updated Chest');
+      expect(res.body.imageUrl).toBe('https://new.com/token.png');
+    });
+
     it('실패: 플레이어는 NPC 토큰을 이동할 수 없음 (403)', async () => {
       await request(app.getHttpServer())
         .patch(`/tokens/${npcTokenId}`)
@@ -472,6 +654,33 @@ describe('TokenController (e2e)', () => {
       const softDeleted = await tokenRepository.findOne({
         where: { id: tokenId },
         withDeleted: true, // 삭제된 것도 포함
+      });
+      expect(softDeleted).not.toBeNull();
+      expect(softDeleted!.deletedAt).toBeInstanceOf(Date);
+    });
+
+    it('성공: GM은 다른 플레이어의 캐릭터 토큰도 삭제 가능', async () => {
+      const otherSheet = await characterSheetRepository.save(
+        createCharacterSheet({
+          participant: otherPlayerParticipant,
+          trpgType: TrpgSystem.DND5E,
+        }),
+      );
+      const otherToken = await tokenRepository.save(
+        createTokenEntity({
+          mapId: testMap.id,
+          characterSheetId: Number(otherSheet.id),
+        }),
+      );
+
+      await request(app.getHttpServer())
+        .delete(`/tokens/${otherToken.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(204);
+
+      const softDeleted = await tokenRepository.findOne({
+        where: { id: otherToken.id },
+        withDeleted: true,
       });
       expect(softDeleted).not.toBeNull();
       expect(softDeleted!.deletedAt).toBeInstanceOf(Date);

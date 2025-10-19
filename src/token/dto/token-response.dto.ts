@@ -6,6 +6,6 @@ export class TokenResponseDto {
   y: number;
   scale: number;
   imageUrl?: string;
-  characterSheetId?: number;
-  npcId?: number;
+  characterSheetId: number | null;
+  npcId: number | null;
 }

@@ -11,6 +11,8 @@ import { CreateVttMapDto } from './dto/create-vttmap.dto';
 import { VTTMAP_ERRORS, VTTMAP_MESSAGES } from './constants/vttmap.constants';
 import { UpdateVttMapDto } from './dto/update-vttmap.dto';
 import { RoomService } from '@/room/room.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MapUpdatedEvent } from '@/vtt/event/map-updated.event';
 
 @Injectable()
 export class VttMapService {
@@ -20,6 +22,7 @@ export class VttMapService {
     private readonly vttMapValidatorService: VttMapValidatorService,
     private readonly s3Service: S3Service,
     private readonly roomService: RoomService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getPresignedUrlForVttMapImage(
@@ -61,7 +64,10 @@ export class VttMapService {
       room,
     });
 
+    console.log('[Service] About to save entity:', vttMap);
     const savedVttMap = await this.vttMapRepository.save(vttMap);
+    console.log('[Service] Saved entity:', savedVttMap);
+
     return {
       message: VTTMAP_MESSAGES.CREATED,
       vttMap: savedVttMap,
@@ -94,14 +100,26 @@ export class VttMapService {
       userId,
     );
 
-    // undefined 제외한 필드만 업데이트
-    Object.assign(vttMap, dto);
+    const updateFields = Object.fromEntries(
+      Object.entries(dto).filter(([, value]) => value !== undefined),
+    );
+    Object.assign(vttMap, updateFields);
 
     const updated = await this.vttMapRepository.save(vttMap);
-    return {
-      message: VTTMAP_MESSAGES.UPDATED,
-      vttMap: updated,
-    };
+    console.log('[Event] Emitting map.updated for', vttMapId);
+    this.eventEmitter.emit(
+      'map.updated',
+      new MapUpdatedEvent(vttMapId, {
+        id: updated.id,
+        name: updated.name,
+        imageUrl: updated.imageUrl,
+        gridType: updated.gridType,
+        gridSize: updated.gridSize,
+        showGrid: updated.showGrid,
+        updatedAt: updated.updatedAt,
+      }),
+    );
+    return { message: VTTMAP_MESSAGES.UPDATED, vttMap: updated };
   }
 
   // 맵 삭제 (GM 전용)

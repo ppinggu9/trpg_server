@@ -15,6 +15,7 @@ import {
 } from './constants/token.constants';
 import { ParticipantRole } from '@/common/enums/participant-role.enum';
 import { VttMapService } from '@/vttmap/vttmap.service';
+import { CreateTokenDto } from './dto/create-token.dto';
 
 @Injectable()
 export class TokenValidatorService {
@@ -42,6 +43,36 @@ export class TokenValidatorService {
       );
     }
     return { participant, map };
+  }
+
+  async validateCreateAccess(
+    mapId: string,
+    dto: CreateTokenDto,
+    userId: number,
+  ) {
+    const { participant } = await this.validateMapAccess(mapId, userId);
+    const isGM = participant.role === ParticipantRole.GM;
+
+    // GM은 모든 토큰 생성 가능
+    if (isGM) return;
+
+    // 플레이어는 오직 자신의 캐릭터 시트 토큰만 생성 가능
+    if (dto.characterSheetId != null) {
+      const isOwner = await this.characterSheetService.isOwner(
+        dto.characterSheetId,
+        userId,
+      );
+      if (!isOwner) {
+        throw new ForbiddenException(
+          TOKEN_ERROR_MESSAGES[TokenErrorCode.NO_MOVE_PERMISSION],
+        );
+      }
+      // NPC 또는 일반 토큰은 생성 불가
+    } else {
+      throw new ForbiddenException(
+        '플레이어는 자신의 캐릭터 시트 토큰만 생성할 수 있습니다.',
+      );
+    }
   }
 
   async validateMoveOrDeleteAccess(

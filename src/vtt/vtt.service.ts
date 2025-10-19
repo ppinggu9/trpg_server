@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { TokenValidatorService } from '@/token/token-validator.service';
 import { TokenService } from '@/token/token.service';
 import { VttMapService } from '@/vttmap/vttmap.service';
+import { UpdateVttMapDto } from '@/vttmap/dto/update-vttmap.dto';
 
 @Injectable()
 export class VttService {
@@ -28,8 +29,7 @@ export class VttService {
     return this.tokenService.updateToken(tokenId, { x, y }, userId);
   }
 
-  async updateMap(mapId: string, updates: Record<string, any>, userId: number) {
-    // VttMapService는 이미 GM 권한 체크 포함
+  async updateMap(mapId: string, updates: UpdateVttMapDto, userId: number) {
     return this.vttMapService.updateVttMap(mapId, userId, updates);
   }
 }

@@ -35,7 +35,7 @@ export class TokenService {
     userId: number,
   ): Promise<TokenResponseDto> {
     this.validator.validateOwnershipRelation(dto);
-    await this.validator.validateMapAccess(mapId, userId);
+    await this.validator.validateCreateAccess(mapId, dto, userId);
 
     const token = this.tokenRepository.create({
       mapId,
@@ -48,7 +48,10 @@ export class TokenService {
       npcId: dto.npcId,
     });
 
+    console.log('[DEBUG] createToken - token to save:', token);
+
     const saved = await this.tokenRepository.save(token);
+    console.log('[DEBUG] createToken - saved token:', saved);
     return this.toResponseDto(saved);
   }
 
@@ -72,6 +75,10 @@ export class TokenService {
   ): Promise<TokenResponseDto[]> {
     await this.validator.validateMapAccess(mapId, userId);
     const tokens = await this.tokenRepository.find({ where: { mapId } });
+    console.log('[DEBUG] getTokensByMap - raw tokens from DB:', tokens);
+
+    const responseDtos = tokens.map((t) => this.toResponseDto(t));
+    console.log('[DEBUG] getTokensByMap - response DTOs:', responseDtos);
     return tokens.map((t) => this.toResponseDto(t));
   }
 

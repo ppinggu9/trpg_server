@@ -17,6 +17,9 @@ import {
   TOKEN_ERROR_MESSAGES,
   TokenErrorCode,
 } from '@/token/constants/token.constants';
+import { OnEvent } from '@nestjs/event-emitter';
+import { MapUpdatedEvent } from './event/map-updated.event';
+import { UpdateMapMessage } from './types/update-map-message.interface';
 
 @WebSocketGateway(11123, {
   namespace: '/vtt',
@@ -57,6 +60,14 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.connectedUsers.delete(mapId);
       }
     }
+  }
+
+  @OnEvent('map.updated')
+  handleMapUpdated(event: MapUpdatedEvent) {
+    this.server.to(`map-${event.mapId}`).emit('mapUpdated', {
+      mapId: event.mapId,
+      ...event.payload,
+    });
   }
 
   @SubscribeMessage('joinMap')
@@ -145,23 +156,33 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('updateMap')
   async handleUpdateMap(
-    @MessageBody() dto: { mapId: string; updates: Record<string, any> },
+    @MessageBody() raw: any, // plain object
     @ConnectedSocket() client: Socket,
   ) {
     const user = client.data.user as jwtValidatedOutputDto;
-    const { mapId, updates } = dto;
 
     try {
-      // 1. GM 권한 + 맵 존재 체크 (VttService 내부에서 처리)
-      await this.vttService.updateMap(mapId, updates, user.id);
+      // 1. 수동 유효성 검사
+      if (!raw || typeof raw.mapId !== 'string') {
+        throw new Error('Invalid mapId');
+      }
+      if (!raw.updates || typeof raw.updates !== 'object') {
+        throw new Error('Invalid updates');
+      }
 
-      // 2. 브로드캐스트
-      this.server.to(`map-${mapId}`).emit('mapUpdated', {
-        mapId,
-        ...updates,
-      });
+      const { mapId, updates } = raw as UpdateMapMessage;
+
+      // // 2. 도메인 레벨 검증 (선택 사항)
+      // validateMapId(mapId);
+      // validateMapUpdates(updates); // 예: gridSize 10~200, gridType enum 등
+
+      // 3. 서비스 호출
+      await this.vttService.updateMap(mapId, updates, user.id);
     } catch (error) {
-      client.emit('error', { message: error.message });
+      console.error('[GW] updateMap error:', error);
+      client.emit('error', {
+        message: error.message || 'Invalid updateMap payload',
+      });
     }
   }
 }

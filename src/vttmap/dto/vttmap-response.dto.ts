@@ -15,10 +15,11 @@ export class VttMapResponseDto {
   }
 
   static fromEntity(message: string, vttmapEntity: VttMap): VttMapResponseDto {
+    console.log('[DTO] Converting entity to response DTO:', vttmapEntity);
     const vttMapDto: VttMapDto = {
       id: vttmapEntity.id,
-      name: vttmapEntity.name,
-      imageUrl: vttmapEntity.imageUrl,
+      name: vttmapEntity.name ?? undefined,
+      imageUrl: vttmapEntity.imageUrl ?? undefined,
       gridType: vttmapEntity.gridType,
       gridSize: vttmapEntity.gridSize,
       showGrid: vttmapEntity.showGrid,
@@ -26,7 +27,7 @@ export class VttMapResponseDto {
       updatedAt: vttmapEntity.updatedAt,
       roomId: vttmapEntity.roomId,
     };
-
+    console.log('[DTO] Resulting VttMapDto:', vttMapDto);
     return new VttMapResponseDto(message, vttMapDto);
   }
 }

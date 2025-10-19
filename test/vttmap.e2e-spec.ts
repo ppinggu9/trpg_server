@@ -393,4 +393,158 @@ describe('VttMapController (e2e)', () => {
         .expect(403);
     });
   });
+
+  describe('EC-04: 입력값 정규화 및 유효성', () => {
+    it('성공: name이 공백만 있는 경우 → 자동 제거 후 저장', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ name: '   ' })
+        .expect(201);
+      expect(res.body.vttMap.name).toBeUndefined();
+    });
+
+    it('성공: imageUrl이 공백만 있는 경우 → 자동 제거 후 저장', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ name: 'Valid Map', imageUrl: '   ' })
+        .expect(201);
+      expect(res.body.vttMap.imageUrl).toBeUndefined();
+    });
+  });
+
+  describe('EC-05: gridSize 경계값 테스트', () => {
+    it('성공: gridSize = 10 (최소값)', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ name: 'Min Grid', gridSize: 10 })
+        .expect(201);
+      expect(res.body.vttMap.gridSize).toBe(10);
+    });
+
+    it('성공: gridSize = 200 (최대값)', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ name: 'Max Grid', gridSize: 200 })
+        .expect(201);
+      expect(res.body.vttMap.gridSize).toBe(200);
+    });
+
+    it('실패: gridSize = 9 → 400', async () => {
+      await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ name: 'Too Small', gridSize: 9 })
+        .expect(400);
+    });
+
+    it('실패: gridSize = 201 → 400', async () => {
+      await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ name: 'Too Large', gridSize: 201 })
+        .expect(400);
+    });
+  });
+
+  describe('EC-06: Soft Delete 후 조회 제외', () => {
+    it('삭제된 맵은 단건 조회 시 404 반환', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ name: 'Will Be Deleted' })
+        .expect(201);
+      const mapId = res.body.vttMap.id;
+
+      // 삭제
+      await request(app.getHttpServer())
+        .delete(`/vttmaps/${mapId}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(200);
+
+      // GM도 조회 불가
+      await request(app.getHttpServer())
+        .get(`/vttmaps/${mapId}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(404);
+
+      // Player도 조회 불가
+      await request(app.getHttpServer())
+        .get(`/vttmaps/${mapId}`)
+        .set('Authorization', `Bearer ${playerToken}`)
+        .expect(404);
+    });
+
+    it('삭제된 맵은 목록 조회 시 포함되지 않음', async () => {
+      await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ name: 'Active Map' })
+        .expect(201);
+
+      const res2 = await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ name: 'Deleted Map' })
+        .expect(201);
+
+      // 삭제
+      await request(app.getHttpServer())
+        .delete(`/vttmaps/${res2.body.vttMap.id}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(200);
+
+      // 목록 조회
+      const listRes = await request(app.getHttpServer())
+        .get(`/vttmaps`)
+        .query({ roomId: testRoom.id })
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(200);
+
+      const names = listRes.body.map((m: any) => m.name);
+      expect(names).toContain('Active Map');
+      expect(names).not.toContain('Deleted Map');
+      expect(listRes.body.length).toBe(1);
+    });
+  });
+
+  describe('UC-07: Presigned URL 발급 → 이미지 저장 → 조회 흐름', () => {
+    it('Presigned URL 발급 → publicUrl을 imageUrl로 저장 → 정상 조회', async () => {
+      // 1. Presigned URL 발급
+      const presignedRes = await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps/presigned-url`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({ fileName: 'dungeon.jpg', contentType: ImageMimeType.JPEG })
+        .expect(201);
+
+      const { publicUrl } = presignedRes.body;
+
+      // 2. 맵 생성 시 publicUrl 사용
+      const createRes = await request(app.getHttpServer())
+        .post(`/vttmaps/rooms/${testRoom.id}/vttmaps`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .send({
+          name: 'Map with Image',
+          imageUrl: publicUrl,
+          gridType: GridType.SQUARE,
+          gridSize: 75,
+        })
+        .expect(201);
+
+      const mapId = createRes.body.vttMap.id;
+
+      // 3. 조회 시 imageUrl이 정상 반환되는지 확인
+      const getRes = await request(app.getHttpServer())
+        .get(`/vttmaps/${mapId}`)
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(200);
+
+      expect(getRes.body.vttMap.imageUrl).toBe(publicUrl);
+      expect(getRes.body.vttMap.name).toBe('Map with Image');
+      expect(getRes.body.vttMap.gridSize).toBe(75);
+    });
+  });
 });
