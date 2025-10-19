@@ -6,7 +6,14 @@ import { NpcType } from '@/common/enums/npc-type.enum';
 export class UpdateNpcDto {
   @ApiProperty({
     type: Object,
-    description: '갱신할 NPC/몬스터 데이터',
+    example: {
+      name: 'Dragon',
+      hp: 200,
+      ac: 18,
+      imageUrl: 'https://example.com/dragon.png',
+    },
+    description:
+      'NPC/몬스터 시트 데이터. `imageUrl` 필드를 통해 이미지 설정 가능',
   })
   @IsObject()
   data: object;

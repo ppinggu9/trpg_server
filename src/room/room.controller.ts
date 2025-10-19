@@ -63,12 +63,19 @@ export class RoomController {
       },
     },
   })
-  @ApiBadRequestResponse({ description: '잘못된 요청 (유효성 검사 실패)' })
-  @ApiConflictResponse({ description: ROOM_ERRORS.ROOM_JOIN_CONFLICT })
+  @ApiBadRequestResponse({
+    description: '잘못된 요청 (유효성 검사 실패)',
+  })
+  @ApiConflictResponse({
+    description: ROOM_ERRORS.ROOM_JOIN_CONFLICT,
+  })
   async createRoom(
     @Body() createRoomDto: CreateRoomDto,
     @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
+    // console.log(
+    //   `[CREATE] 사용자 ${req.user.id} 요청 - name: "${createRoomDto.name}", system: ${createRoomDto.system}`,
+    // );
     return this.roomService.createRoom(createRoomDto, req.user.id);
   }
 
@@ -98,12 +105,17 @@ export class RoomController {
   @ApiBadRequestResponse({
     description: `${ROOM_ERRORS.ROOM_FULL} 또는 ${ROOM_ERRORS.PASSWORD_REQUIRED} 또는 ${ROOM_ERRORS.PASSWORD_MISMATCH}`,
   })
-  @ApiNotFoundResponse({ description: ROOM_ERRORS.NOT_FOUND })
+  @ApiNotFoundResponse({
+    description: ROOM_ERRORS.NOT_FOUND,
+  })
   async joinRoom(
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Body() joinRoomDto: JoinRoomDto,
     @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
+    // console.log(
+    //   `[JOIN] 사용자 ${req.user.id} → 방 ${roomId} (비밀번호 길이: ${joinRoomDto.password.length})`,
+    // );
     return this.roomService.joinRoom(roomId, req.user.id, joinRoomDto);
   }
 
@@ -120,11 +132,14 @@ export class RoomController {
     description: '나갈 방의 UUID',
   })
   @ApiNoContentResponse({ description: '방 나가기 성공 (멱등성 보장)' })
-  @ApiForbiddenResponse({ description: ROOM_ERRORS.CANNOT_LEAVE_AS_CREATOR })
+  @ApiForbiddenResponse({
+    description: ROOM_ERRORS.CANNOT_LEAVE_AS_CREATOR,
+  })
   async leaveRoom(
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Req() req: RequestWithUser,
   ): Promise<void> {
+    // console.log(`[LEAVE] 사용자 ${req.user.id} → 방 나가기: ${roomId}`);
     await this.roomService.leaveRoom(req.user.id, roomId);
   }
 
@@ -141,11 +156,14 @@ export class RoomController {
     description: '삭제할 방의 UUID',
   })
   @ApiNoContentResponse({ description: '방 삭제 성공 (멱등성 보장)' })
-  @ApiForbiddenResponse({ description: ROOM_ERRORS.NOT_ROOM_CREATOR })
+  @ApiForbiddenResponse({
+    description: ROOM_ERRORS.NOT_ROOM_CREATOR,
+  })
   async deleteRoom(
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Req() req: RequestWithUser,
   ): Promise<void> {
+    // console.log(`[DELETE] 사용자 ${req.user.id} → 방 삭제 요청: ${roomId}`);
     await this.roomService.deleteRoom(roomId, req.user.id);
   }
 
@@ -174,12 +192,17 @@ export class RoomController {
   @ApiBadRequestResponse({
     description: `${ROOM_ERRORS.CANNOT_TRANSFER_TO_SELF} 또는 ${ROOM_ERRORS.TARGET_NOT_IN_ROOM}`,
   })
-  @ApiForbiddenResponse({ description: ROOM_ERRORS.NOT_ROOM_CREATOR })
+  @ApiForbiddenResponse({
+    description: ROOM_ERRORS.NOT_ROOM_CREATOR,
+  })
   async transferCreator(
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Body() dto: TransferCreatorDto,
     @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
+    // console.log(
+    //   `[TRANSFER] 방장 위임 - 방: ${roomId}, 기존: ${req.user.id}, 신임: ${dto.newCreatorId}`,
+    // );
     return this.roomService.transferCreator(
       roomId,
       req.user.id,
@@ -217,13 +240,18 @@ export class RoomController {
   @ApiBadRequestResponse({
     description: `${ROOM_ERRORS.TARGET_NOT_IN_ROOM} 또는 ${ROOM_ERRORS.INVALID_PARTICIPANT_ROLE}`,
   })
-  @ApiForbiddenResponse({ description: ROOM_ERRORS.NOT_ROOM_CREATOR })
+  @ApiForbiddenResponse({
+    description: ROOM_ERRORS.NOT_ROOM_CREATOR,
+  })
   async updateParticipantRole(
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Param('userId', ParseIntPipe) userId: number,
     @Body() dto: UpdateParticipantRoleDto,
     @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
+    // console.log(
+    //   `[UPDATE_ROLE] User ${req.user.id} changing role of ${userId} to ${dto.role} in room ${roomId}`,
+    // );
     return this.roomService.updateParticipantRole(
       roomId,
       req.user.id,
@@ -247,10 +275,17 @@ export class RoomController {
     description: '참여자 목록 조회 성공',
     type: [RoomParticipantDto],
   })
-  @ApiNotFoundResponse({ description: ROOM_ERRORS.NOT_FOUND })
+  @ApiNotFoundResponse({
+    description: ROOM_ERRORS.NOT_FOUND,
+  })
   async getParticipantsOnly(
     @Param('roomId', ParseUUIDPipe) roomId: string,
   ): Promise<RoomParticipantDto[]> {
+    // const participants = await this.roomService.getParticipantsOnly(roomId);
+    // console.log(
+    //   `[GET_PARTICIPANTS] 방 ${roomId} 참여자 목록 조회 결과:`,
+    //   participants,
+    // );
     return this.roomService.getParticipantsOnly(roomId);
   }
 
@@ -269,10 +304,14 @@ export class RoomController {
     description: '방 정보 조회 성공',
     type: RoomResponseDto,
   })
-  @ApiNotFoundResponse({ description: ROOM_ERRORS.NOT_FOUND })
+  @ApiNotFoundResponse({
+    description: ROOM_ERRORS.NOT_FOUND,
+  })
   async getRoom(
     @Param('roomId', ParseUUIDPipe) roomId: string,
+    // @Req() req: RequestWithUser,
   ): Promise<RoomResponseDto> {
+    // console.log(`[GET_ROOM] 사용자 ${req.user.id} → 방 정보 조회: ${roomId}`);
     return this.roomService.getRoomWithParticipants(roomId);
   }
 }

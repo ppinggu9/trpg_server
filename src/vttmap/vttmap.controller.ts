@@ -84,7 +84,11 @@ export class VttMapController {
   @ApiOperation({
     summary: 'VTT 맵 이미지 업로드용 Presigned URL 발급',
     description:
-      'GM 전용. 클라이언트는 반환된 `presignedUrl`로 S3에 PUT 후, `publicUrl`을 `imageUrl`에 저장',
+      'GM 전용 vttmap 이미지를 업로드하기 위한 Presigned URL을 밠급합니다.\n' +
+      '1. 이 엔드포인트로 `presignedUrl`과 `publicUrl`을 받습니다.\n' +
+      '2. 클라이언트가 `presignedUrl`로 S3에 이미지 PUT 요청\n' +
+      '3. 성공 시, **반드시 `publicUrl`을 vttmap의 imageUrl 필드에 저장**하세요.\n' +
+      '※ `data`는 JSONB 필드로, 동적으로 모든 TRPG 데이터를 저장할 수 있습니다.',
   })
   @ApiParam({ name: 'roomId', type: 'string', format: 'uuid' })
   @ApiBody({ type: CreatePresignedUrlDto })

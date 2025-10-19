@@ -47,7 +47,11 @@ export class CharacterSheetController {
   @ApiOperation({
     summary: '캐릭터 시트 생성',
     description:
-      '새로운 캐릭터 시트를 생성합니다. (멱등성 보장: 이미 존재하면 409 반환)',
+      '자신의 캐릭터 시트를 생성하거나, GM이 방 내 다른 참여자의 시트를 생성할 수 있습니다.\n' +
+      '- 일반 참여자: 자신의 participantId만 사용 가능\n' +
+      '- GM: 모든 participantId 사용 가능\n' +
+      '- `data.imageUrl` 필드를 통해 캐릭터 이미지 URL 설정 가능\n' +
+      '멱등성 보장: 이미 존재하면 409 반환',
   })
   @ApiParam({
     name: 'participantId',
@@ -60,7 +64,7 @@ export class CharacterSheetController {
     type: CharacterSheetResponseDto,
   })
   @ApiBadRequestResponse({
-    description: '잘못된 요청 (유효성 검사 실패)',
+    description: '잘못된 요청 (유효성 검사 실패) 또는 data가 객체 아님',
   })
   @ApiConflictResponse({
     description: CHARACTER_SHEET_ERRORS.SHEET_ALREADY_EXISTS,
@@ -81,6 +85,16 @@ export class CharacterSheetController {
       createDto,
       req.user.id,
     );
+    // console.log(
+    //   `[DEBUG CharacterSheet.create] Created sheet for participant ${participantId}, requester ${req.user.id}:`,
+    //   {
+    //     id: createdSheet.id,
+    //     participantId: createdSheet.participant?.id,
+    //     ownerId: createdSheet.participant?.user?.id,
+    //     isPublic: createdSheet.isPublic,
+    //     trpgType: createdSheet.trpgType,
+    //   },
+    // );
     return CharacterSheetResponseDto.fromEntity(createdSheet);
   }
 
@@ -90,8 +104,10 @@ export class CharacterSheetController {
     summary: '캐릭터 시트용 이미지 업로드 Presigned URL 발급',
     description:
       '캐릭터 시트에 사용할 이미지(아바타 등)를 업로드하기 위한 Presigned URL을 발급합니다. ' +
-      '반환된 `presignedUrl`로 클라이언트가 직접 S3에 PUT 요청 후, ' +
-      '`publicUrl`을 캐릭터 시트의 `data` 필드에 저장하세요.',
+      '1. 이 엔드포인트로 `presignedUrl`과 `publicUrl`을 받습니다.\n' +
+      '2. 클라이언트가 `presignedUrl`로 S3에 이미지 PUT 요청\n' +
+      '3. 성공 시, **반드시 `publicUrl`을 캐릭터시트의 `data.imageUrl` 필드에 저장**하세요.\n' +
+      '※ `data`는 JSONB 필드로, 동적으로 모든 TRPG 데이터를 저장할 수 있습니다.',
   })
   @ApiParam({
     name: 'participantId',
@@ -134,12 +150,17 @@ export class CharacterSheetController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '캐릭터 시트 조회',
-    description: '소유자, GM, 또는 공개 시트인 경우 조회 가능합니다.',
+    description:
+      '다음 조건 중 하나를 만족하면 조회 가능:\n' +
+      '- 시트 소유자 (ownerId와 요청자 ID 일치)\n' +
+      '- 방의 GM\n' +
+      '- 시트가 공개 상태 (isPublic: true)\n' +
+      '응답에는 `ownerId`가 포함되어, 클라이언트에서 권한 기반 UI 표시 가능.',
   })
   @ApiParam({
     name: 'participantId',
     type: 'number',
-    description: '방 참가자 ID',
+    description: '조회할 캐릭터 시트의 방 참가자 ID',
   })
   @ApiOkResponse({
     description: '캐릭터 시트 조회 성공',
@@ -159,16 +180,16 @@ export class CharacterSheetController {
       participantId,
       req.user.id,
     );
-    console.log(
-      `[DEBUG CharacterSheet.findOne] Loaded sheet for participant ${participantId}, requester ${req.user.id}:`,
-      {
-        id: foundSheet.id,
-        participantId: foundSheet.participant?.id,
-        ownerId: foundSheet.participant?.user?.id,
-        isPublic: foundSheet.isPublic,
-        trpgType: foundSheet.trpgType,
-      },
-    );
+    // console.log(
+    //   `[DEBUG CharacterSheet.findOne] Loaded sheet for participant ${participantId}, requester ${req.user.id}:`,
+    //   {
+    //     id: foundSheet.id,
+    //     participantId: foundSheet.participant?.id,
+    //     ownerId: foundSheet.participant?.user?.id,
+    //     isPublic: foundSheet.isPublic,
+    //     trpgType: foundSheet.trpgType,
+    //   },
+    // );
     return CharacterSheetResponseDto.fromEntity(foundSheet);
   }
 
@@ -177,12 +198,15 @@ export class CharacterSheetController {
   @ApiOperation({
     summary: '캐릭터 시트 업데이트',
     description:
-      '캐릭터 시트를 업데이트합니다. isPublic 필드는 GM만 수정 가능합니다.',
+      '소유자 또는 GM만 시트를 수정할 수 있습니다.\n' +
+      '- `data` 필드: 소유자와 GM 모두 수정 가능 (이미지 포함)\n' +
+      '- `isPublic` 필드: **오직 GM만** 수정 가능\n' +
+      '예: `data.imageUrl`을 업데이트하여 캐릭터 아바타 변경 가능.',
   })
   @ApiParam({
     name: 'participantId',
     type: 'number',
-    description: '방 참가자 ID',
+    description: '수정할 캐릭터 시트의 방 참가자 ID',
   })
   @ApiBody({ type: UpdateCharacterSheetDto })
   @ApiOkResponse({
@@ -205,6 +229,18 @@ export class CharacterSheetController {
       req.user.id,
       updateDto,
     );
+    // console.log(
+    //   `[DEBUG CharacterSheet.update] Updated sheet for participant ${participantId}, requester ${req.user.id}:`,
+    //   {
+    //     id: updatedSheet.id,
+    //     participantId: updatedSheet.participant?.id,
+    //     ownerId: updatedSheet.participant?.user?.id,
+    //     isPublic: updatedSheet.isPublic,
+    //     trpgType: updatedSheet.trpgType,
+    //     // isPublic 변경 시도 여부도 확인 가능
+    //     requestedIsPublic: updateDto.isPublic,
+    //   },
+    // );
     return CharacterSheetResponseDto.fromEntity(updatedSheet);
   }
 }

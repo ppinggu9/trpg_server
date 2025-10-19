@@ -305,7 +305,8 @@ describe('Room API (e2e)', () => {
         .send({ password: '' })
         .expect(400);
 
-      expectErrorResponse(response, 400, ROOM_ERRORS.PASSWORD_REQUIRED);
+      // 따로 배열로 받도록 수정
+      expect(response.body.message).toEqual([ROOM_ERRORS.PASSWORD_REQUIRED]);
     });
   });
 

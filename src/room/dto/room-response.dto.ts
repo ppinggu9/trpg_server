@@ -34,8 +34,8 @@ export class RoomResponseDto {
   })
   participants: RoomParticipantDto[];
 
-  @ApiProperty({ description: '방장 사용자 ID' })
-  creatorId: number;
+  @ApiProperty({ description: '방장 사용자 ID', nullable: true })
+  creatorId: number | null;
 
   @ApiProperty({ description: '방장 닉네임' })
   creatorNickname: string;
@@ -46,7 +46,6 @@ export class RoomResponseDto {
         ?.filter((p) => p.leftAt === null)
         .map((p) => {
           // console.log(`[DTO] User ${p.user.id} loaded role:`, p.role);
-
           return {
             userId: p.user.id,
             name: p.user.name,

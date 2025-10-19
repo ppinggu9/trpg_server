@@ -5,6 +5,10 @@ import { ApiProperty } from '@nestjs/swagger';
 export class UpdateCharacterSheetDto {
   @ApiProperty({
     type: Object,
+    example: {
+      hp: 50,
+      // imageUrl: 'https://d12345.cloudfront.net/.../new-avatar.png', // ← 예시 추가
+    },
     description: '갱신할 캐릭터 시트 데이터',
   })
   @IsObject()
