@@ -4,6 +4,8 @@ import { TokenValidatorService } from '@/token/token-validator.service';
 import { TokenService } from '@/token/token.service';
 import { VttMapService } from '@/vttmap/vttmap.service';
 import { UpdateVttMapDto } from '@/vttmap/dto/update-vttmap.dto';
+import { TokenResponseDto } from '@/token/dto/token-response.dto';
+import { VttMapValidatorService } from '@/vttmap/vttmap-validator.service';
 
 @Injectable()
 export class VttService {
@@ -11,7 +13,15 @@ export class VttService {
     private readonly validator: TokenValidatorService,
     private readonly tokenService: TokenService,
     private readonly vttMapService: VttMapService,
+    private readonly vttMapValidatorService: VttMapValidatorService,
   ) {}
+
+  async validateParticipantAccess(roomId: string, userId: number) {
+    return this.vttMapValidatorService.validateParticipantAccess(
+      roomId,
+      userId,
+    );
+  }
 
   async validateMapAccess(mapId: string, userId: number) {
     return this.validator.validateMapAccess(mapId, userId);
@@ -19,6 +29,16 @@ export class VttService {
 
   async validateTokenMoveAccess(tokenId: string, userId: number) {
     return this.validator.validateMoveOrDeleteAccess(tokenId, userId);
+  }
+
+  async getVttMapForUser(mapId: string, userId: number) {
+    return this.vttMapService.getVttMap(mapId, userId);
+  }
+  async getTokensByMap(
+    mapId: string,
+    userId: number,
+  ): Promise<TokenResponseDto[]> {
+    return this.tokenService.getTokensByMapForUser(mapId, userId);
   }
 
   async moveToken(

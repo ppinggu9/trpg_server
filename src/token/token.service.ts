@@ -6,6 +6,11 @@ import { Token } from './entities/token.entity';
 import { Repository } from 'typeorm';
 import { TokenValidatorService } from './token-validator.service';
 import { TokenResponseDto } from './dto/token-response.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TokenCreatedEvent } from './events/token-created.event';
+import { TokenUpdatedEvent } from './events/token-updated.event';
+import { TokenDeletedEvent } from './events/token-deleted.event';
+import { TOKEN_EVENTS } from './constants/events';
 
 @Injectable()
 export class TokenService {
@@ -13,6 +18,7 @@ export class TokenService {
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<Token>,
     private readonly validator: TokenValidatorService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private toResponseDto(token: Token): TokenResponseDto {
@@ -51,8 +57,15 @@ export class TokenService {
     console.log('[DEBUG] createToken - token to save:', token);
 
     const saved = await this.tokenRepository.save(token);
+    const responseDto = this.toResponseDto(saved);
+
+    this.eventEmitter.emit(
+      TOKEN_EVENTS.CREATED,
+      new TokenCreatedEvent(mapId, responseDto),
+    );
+
     console.log('[DEBUG] createToken - saved token:', saved);
-    return this.toResponseDto(saved);
+    return responseDto;
   }
 
   async updateToken(
@@ -66,7 +79,14 @@ export class TokenService {
     );
     Object.assign(token, dto);
     const updated = await this.tokenRepository.save(token);
-    return this.toResponseDto(updated);
+    const responseDto = this.toResponseDto(updated);
+
+    this.eventEmitter.emit(
+      TOKEN_EVENTS.UPDATED,
+      new TokenUpdatedEvent(token.mapId, responseDto),
+    );
+
+    return responseDto;
   }
 
   async getTokensByMap(
@@ -79,7 +99,7 @@ export class TokenService {
 
     const responseDtos = tokens.map((t) => this.toResponseDto(t));
     console.log('[DEBUG] getTokensByMap - response DTOs:', responseDtos);
-    return tokens.map((t) => this.toResponseDto(t));
+    return responseDtos;
   }
 
   async deleteToken(tokenId: string, userId: number): Promise<void> {
@@ -88,5 +108,22 @@ export class TokenService {
       userId,
     );
     await this.tokenRepository.softRemove(token);
+
+    this.eventEmitter.emit(
+      TOKEN_EVENTS.DELETED,
+      new TokenDeletedEvent(token.mapId, tokenId),
+    );
+  }
+
+  //vtt gateway에서 token을 받아올때 사용한다
+  async getTokensByMapForUser(
+    mapId: string,
+    userId: number,
+  ): Promise<TokenResponseDto[]> {
+    await this.validator.validateMapAccess(mapId, userId);
+    const tokens = await this.tokenRepository.find({
+      where: { mapId },
+    });
+    return tokens.map((t) => this.toResponseDto(t));
   }
 }

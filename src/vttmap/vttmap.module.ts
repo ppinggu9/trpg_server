@@ -11,6 +11,6 @@ import { VttMapService } from './vttmap.service';
   imports: [TypeOrmModule.forFeature([VttMap]), RoomModule, S3Module],
   controllers: [VttMapController],
   providers: [VttMapService, VttMapValidatorService],
-  exports: [VttMapService],
+  exports: [VttMapService, VttMapValidatorService],
 })
 export class VttmapModule {}

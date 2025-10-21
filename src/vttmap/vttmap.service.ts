@@ -13,6 +13,9 @@ import { UpdateVttMapDto } from './dto/update-vttmap.dto';
 import { RoomService } from '@/room/room.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MapUpdatedEvent } from '@/vtt/event/map-updated.event';
+import { VttMapDto } from './dto/vttmap.dto';
+import { MapCreatedEvent } from '@/vtt/event/map-created.event';
+import { MapDeletedEvent } from '@/vtt/event/map-deleted.event';
 
 @Injectable()
 export class VttMapService {
@@ -24,6 +27,10 @@ export class VttMapService {
     private readonly roomService: RoomService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private toDto(map: VttMap): VttMapDto {
+    return VttMapDto.fromEntity(map);
+  }
 
   async getPresignedUrlForVttMapImage(
     roomId: string,
@@ -67,6 +74,11 @@ export class VttMapService {
     console.log('[Service] About to save entity:', vttMap);
     const savedVttMap = await this.vttMapRepository.save(vttMap);
     console.log('[Service] Saved entity:', savedVttMap);
+
+    this.eventEmitter.emit(
+      'map.created',
+      new MapCreatedEvent(roomId, this.toDto(savedVttMap)),
+    );
 
     return {
       message: VTTMAP_MESSAGES.CREATED,
@@ -132,6 +144,12 @@ export class VttMapService {
       userId,
     );
     await this.vttMapRepository.softRemove(vttMap);
+
+    this.eventEmitter.emit(
+      'map.deleted',
+      new MapDeletedEvent(vttMap.roomId, vttMap.id),
+    );
+
     return { success: true };
   }
 
