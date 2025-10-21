@@ -668,7 +668,7 @@ describe('VttGateway (e2e) - WebSocket', () => {
         'error',
         5000,
       );
-      expect(error.message).toBe('해당 방에 참여하지 않았습니다.'); // 실제 에러 메시지로 수정
+      expect(error.message).toBe('해당 방에 참여하지 않았습니다.');
 
       socketOutsider.disconnect(); // 테스트 종료 시 해제
     });
