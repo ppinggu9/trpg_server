@@ -1,4 +1,3 @@
-// src/common/dto/create-presigned-url.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsEnum } from 'class-validator';
 import { ImageMimeType } from '@/common/enums/image-mime-type.enum';

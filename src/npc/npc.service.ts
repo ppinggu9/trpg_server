@@ -1,4 +1,3 @@
-// src/npc/services/npc.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -38,7 +37,6 @@ export class NpcService {
     });
     return this.npcRepository.save(npc);
   }
-  // 아래에 중복된 코드를 묶은 함수이다.
   private async findNpcOrFail(npcId: number): Promise<Npc> {
     const npc = await this.npcRepository.findOne({ where: { id: npcId } });
     if (!npc || !npc.roomId) {

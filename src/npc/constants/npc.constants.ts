@@ -1,4 +1,3 @@
-// src/npc/constants/npc.constants.ts
 export const NPC_MESSAGES = {
   CREATED: 'NPC가 성공적으로 생성되었습니다.',
   RETRIEVED: 'NPC를 조회했습니다.',

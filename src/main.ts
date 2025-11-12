@@ -13,7 +13,8 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 async function bootstrap() {
   initializeTransactionalContext({ storageDriver: StorageDriver.AUTO });
   const app = await NestFactory.create(AppModule);
-  app.useWebSocketAdapter(new IoAdapter(app));
+  const httpServer = app.getHttpServer();
+  app.useWebSocketAdapter(new IoAdapter(httpServer));
 
   const configService = app.get(ConfigService);
   if (configService.get<boolean>('DATABASE_MIGRATIONS_RUN')) {

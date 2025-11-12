@@ -13,18 +13,18 @@ import { WsAuthMiddleware } from './ws-auth.middleware';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([RefreshToken]), // 추가
+    TypeOrmModule.forFeature([RefreshToken]),
     ConfigModule.forRoot(),
     UsersModule,
     PassportModule,
     JwtModule.registerAsync({
-      imports: [ConfigModule], // Ensure ConfigModule is available
+      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET', 'mysecretkey'), // Load secret from env
+        secret: configService.get<string>('JWT_SECRET', 'mysecretkey'),
         signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRES_IN', '15m'),
-        }, // Load expiration from env
+        },
       }),
     }),
   ],

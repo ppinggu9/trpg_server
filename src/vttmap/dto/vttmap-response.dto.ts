@@ -15,7 +15,6 @@ export class VttMapResponseDto {
   }
 
   static fromEntity(message: string, vttmapEntity: VttMap): VttMapResponseDto {
-    console.log('[DTO] Converting entity to response DTO:', vttmapEntity);
     const vttMapDto: VttMapDto = {
       id: vttmapEntity.id,
       name: vttmapEntity.name ?? undefined,
@@ -27,7 +26,6 @@ export class VttMapResponseDto {
       updatedAt: vttmapEntity.updatedAt,
       roomId: vttmapEntity.roomId,
     };
-    console.log('[DTO] Resulting VttMapDto:', vttMapDto);
     return new VttMapResponseDto(message, vttMapDto);
   }
 }

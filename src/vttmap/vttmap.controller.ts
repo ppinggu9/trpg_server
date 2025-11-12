@@ -92,7 +92,7 @@ export class VttMapController {
   })
   @ApiParam({ name: 'roomId', type: 'string', format: 'uuid' })
   @ApiBody({ type: CreatePresignedUrlDto })
-  @ApiCreatedResponse({ type: PresignedUrlResponseDto }) // ✅ 일관성 유지
+  @ApiCreatedResponse({ type: PresignedUrlResponseDto })
   @ApiBadRequestResponse({ description: '잘못된 이미지 형식' })
   @ApiUnauthorizedResponse({ description: '인증되지 않음' })
   @ApiForbiddenResponse({ description: VTTMAP_ERRORS.NOT_ROOM_CREATOR })
@@ -206,6 +206,6 @@ export class VttMapController {
     @Req() req: RequestWithUser,
   ) {
     await this.vttMapService.deleteVttMap(mapId, req.user.id);
-    return new DeleteVttMapResponseDto(); // ✅ 명확한 반환
+    return new DeleteVttMapResponseDto();
   }
 }

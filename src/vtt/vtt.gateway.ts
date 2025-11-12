@@ -26,7 +26,7 @@ import { TokenDeletedEvent } from '@/token/events/token-deleted.event';
 import { MapCreatedEvent } from './event/map-created.event';
 import { MapDeletedEvent } from './event/map-deleted.event';
 
-@WebSocketGateway(11123, {
+@WebSocketGateway({
   namespace: '/vtt',
   cors: {
     origin: '*',
@@ -52,14 +52,13 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     const user = client.data.user as jwtValidatedOutputDto;
-    console.log(`✅ VTT client connected: ${client.id}, User: ${user.email}`);
+    console.log(` VTT client connected: ${client.id}, User: ${user.email}`);
   }
 
   handleDisconnect(client: Socket) {
     const user = client.data.user as jwtValidatedOutputDto;
     console.log(`VTT client disconnected: ${client.id}`);
 
-    // connectedMaps에서 사용자 제거
     for (const [mapId, userSet] of this.connectedMaps.entries()) {
       userSet.delete(user.id);
       if (userSet.size === 0) {
@@ -67,7 +66,6 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
-    // connectedRooms에서 사용자 제거
     for (const [roomId, userSet] of this.connectedRooms.entries()) {
       userSet.delete(user.id);
       if (userSet.size === 0) {
@@ -84,7 +82,6 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const user = client.data.user as jwtValidatedOutputDto;
     const userId = user.id;
     const roomId = data.roomId;
-    console.log(`[DEBUG] joinRoom called: roomId=${roomId}, userId=${userId}`);
 
     try {
       await this.vttService.validateParticipantAccess(roomId, userId);
@@ -97,7 +94,6 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.join(`room-${roomId}`);
       client.emit('joinedRoom', { roomId });
-      console.log(`[DEBUG] User ${userId} successfully joined room ${roomId}`);
     } catch (error) {
       console.error(
         `[ERROR] joinRoom failed for user ${userId}:`,
@@ -136,14 +132,9 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const user = client.data.user as jwtValidatedOutputDto;
     const userId = user.id;
     const { mapId } = data;
-    console.log(`[DEBUG] joinMap called: mapId=${mapId}, userId=${userId}`);
     try {
-      // 맵 정보 조회 + 권한 검증 (roomId 포함)
       const map = await this.vttService.getVttMapForUser(mapId, userId);
       const isJoinedRoom = this.connectedRooms.get(map.roomId)?.has(userId);
-      console.log(
-        `[DEBUG] isJoinedRoom check: roomId=${map.roomId}, result=${isJoinedRoom}`,
-      );
       if (!isJoinedRoom) {
         console.warn(
           `[WARN] User ${userId} not in room ${map.roomId}, cannot join map`,
@@ -152,13 +143,11 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      // 상태 등록
       if (!this.connectedMaps.has(mapId)) {
         this.connectedMaps.set(mapId, new Set());
       }
       this.connectedMaps.get(mapId)!.add(userId);
 
-      // Socket.IO 방 참여
       client.join(`room-${map.roomId}`); // 맵 생성/삭제 수신용
       client.join(`map-${mapId}`); // 토큰/맵 설정 수신용
 
@@ -239,13 +228,11 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { tokenId, x, y } = dto;
 
     try {
-      // 1. 권한 체크 (토큰 존재 + 이동 권한)
       const token = await this.vttService.validateTokenMoveAccess(
         tokenId,
         userId,
       );
 
-      // 2. 현재 맵에 접속 중인지 확인
       const isCurrentlyInMap = this.connectedMaps.get(token.mapId)?.has(userId);
       if (!isCurrentlyInMap) {
         client.emit('error', {
@@ -254,7 +241,6 @@ export class VttGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      // 3. userId를 명시적으로 전달
       await this.vttService.moveToken(tokenId, { x, y }, userId);
     } catch (error) {
       client.emit('error', { message: error.message });

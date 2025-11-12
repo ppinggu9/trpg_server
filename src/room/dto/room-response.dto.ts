@@ -45,7 +45,6 @@ export class RoomResponseDto {
       room.participants
         ?.filter((p) => p.leftAt === null)
         .map((p) => {
-          // console.log(`[DTO] User ${p.user.id} loaded role:`, p.role);
           return {
             userId: p.user.id,
             name: p.user.name,

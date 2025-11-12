@@ -10,6 +10,8 @@ import {
   HttpStatus,
   HttpCode,
   ParseIntPipe,
+  Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import {
@@ -25,6 +27,8 @@ import {
   ApiConflictResponse,
   ApiBearerAuth,
   ApiResponse,
+  ApiQuery,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { CharacterSheetService } from './character-sheet.service';
 import { CreateCharacterSheetDto } from './dto/create-character-sheet.dto';
@@ -85,16 +89,6 @@ export class CharacterSheetController {
       createDto,
       req.user.id,
     );
-    // console.log(
-    //   `[DEBUG CharacterSheet.create] Created sheet for participant ${participantId}, requester ${req.user.id}:`,
-    //   {
-    //     id: createdSheet.id,
-    //     participantId: createdSheet.participant?.id,
-    //     ownerId: createdSheet.participant?.user?.id,
-    //     isPublic: createdSheet.isPublic,
-    //     trpgType: createdSheet.trpgType,
-    //   },
-    // );
     return CharacterSheetResponseDto.fromEntity(createdSheet);
   }
 
@@ -180,17 +174,41 @@ export class CharacterSheetController {
       participantId,
       req.user.id,
     );
-    // console.log(
-    //   `[DEBUG CharacterSheet.findOne] Loaded sheet for participant ${participantId}, requester ${req.user.id}:`,
-    //   {
-    //     id: foundSheet.id,
-    //     participantId: foundSheet.participant?.id,
-    //     ownerId: foundSheet.participant?.user?.id,
-    //     isPublic: foundSheet.isPublic,
-    //     trpgType: foundSheet.trpgType,
-    //   },
-    // );
     return CharacterSheetResponseDto.fromEntity(foundSheet);
+  }
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '방 내 캐릭터 시트 목록 조회',
+    description:
+      '특정 방에 속한 모든 캐릭터 시트 목록을 조회합니다. 일반 참여자는 자신의 시트와 공개된 시트만 볼 수 있습니다.',
+  })
+  @ApiQuery({
+    name: 'roomId',
+    type: 'string',
+    format: 'uuid',
+    required: true,
+    description: '방 UUID',
+  })
+  @ApiOkResponse({
+    description: '캐릭터 시트 목록 조회 성공',
+    type: [CharacterSheetResponseDto],
+  })
+  @ApiUnauthorizedResponse({ description: '인증되지 않은 사용자' })
+  @ApiForbiddenResponse({
+    description: CHARACTER_SHEET_ERRORS.NO_READ_PERMISSION,
+  })
+  @ApiNotFoundResponse({ description: '방을 찾을 수 없음' })
+  async getCharacterSheetsByRoom(
+    @Query('roomId', ParseUUIDPipe) roomId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    const sheets = await this.characterSheetService.getCharacterSheetsByRoom(
+      roomId,
+      req.user.id,
+    );
+    return sheets.map(CharacterSheetResponseDto.fromEntity);
   }
 
   @Patch(':participantId')
@@ -229,18 +247,6 @@ export class CharacterSheetController {
       req.user.id,
       updateDto,
     );
-    // console.log(
-    //   `[DEBUG CharacterSheet.update] Updated sheet for participant ${participantId}, requester ${req.user.id}:`,
-    //   {
-    //     id: updatedSheet.id,
-    //     participantId: updatedSheet.participant?.id,
-    //     ownerId: updatedSheet.participant?.user?.id,
-    //     isPublic: updatedSheet.isPublic,
-    //     trpgType: updatedSheet.trpgType,
-    //     // isPublic 변경 시도 여부도 확인 가능
-    //     requestedIsPublic: updateDto.isPublic,
-    //   },
-    // );
     return CharacterSheetResponseDto.fromEntity(updatedSheet);
   }
 }

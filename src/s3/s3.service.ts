@@ -1,4 +1,3 @@
-// s3/s3.service.ts
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -19,7 +18,6 @@ export class S3Service {
     this.bucketName = this.configService.get<string>('S3_BUCKET_NAME');
     this.cloudFrontDomain = this.configService.get<string>('CLOUDFRONT_DOMAIN');
 
-    // IAM Role(인스턴스활성화 O) 을 쓰는게 권장
     const credentials =
       accessKeyId && secretAccessKey
         ? {
@@ -45,7 +43,6 @@ export class S3Service {
     contentType: string,
     expiresIn: number = 900,
   ): Promise<string> {
-    // 호출자가 검증하도록 할것
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: key,
@@ -79,15 +76,4 @@ export class S3Service {
   getBucketName(): string {
     return this.bucketName;
   }
-
-  // // 테스트를 위한 업로드 함수
-  // async uploadObject(key: string, body: Buffer | string, contentType?: string) {
-  //   const command = new PutObjectCommand({
-  //     Bucket: this.bucketName,
-  //     Key: key,
-  //     Body: body,
-  //     ContentType: contentType,
-  //   });
-  //   return this.s3Client.send(command);
-  // }
 }

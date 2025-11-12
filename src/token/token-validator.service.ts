@@ -26,8 +26,6 @@ export class TokenValidatorService {
     private readonly roomParticipantService: RoomParticipantService,
     private readonly characterSheetService: CharacterSheetService,
   ) {}
-  // 일반 토큰(이미지 토큰) 및 NPC 토큰은 GM만 조작 가능합니다. ispublic 여부는 X
-  // 플레이어는 자신의 캐릭터 시트에 연결된 토큰만 이동/삭제할 수 있습니다.
 
   async validateMapAccess(mapId: string, userId: number) {
     const map = await this.vttMapService.getMapWithRoom(mapId);
@@ -53,10 +51,8 @@ export class TokenValidatorService {
     const { participant } = await this.validateMapAccess(mapId, userId);
     const isGM = participant.role === ParticipantRole.GM;
 
-    // GM은 모든 토큰 생성 가능
     if (isGM) return;
 
-    // 플레이어는 오직 자신의 캐릭터 시트 토큰만 생성 가능
     if (dto.characterSheetId != null) {
       const isOwner = await this.characterSheetService.isOwner(
         dto.characterSheetId,
@@ -67,7 +63,6 @@ export class TokenValidatorService {
           TOKEN_ERROR_MESSAGES[TokenErrorCode.NO_MOVE_PERMISSION],
         );
       }
-      // NPC 또는 일반 토큰은 생성 불가
     } else {
       throw new ForbiddenException(
         '플레이어는 자신의 캐릭터 시트 토큰만 생성할 수 있습니다.',
@@ -94,7 +89,6 @@ export class TokenValidatorService {
 
     if (isGM) return token;
 
-    // 캐릭터 시트 토큰: 소유자만 조작 가능
     if (token.characterSheetId != null) {
       const canEdit = await this.characterSheetService.isOwner(
         token.characterSheetId,
@@ -108,7 +102,6 @@ export class TokenValidatorService {
       return token;
     }
 
-    // NPC 토큰 또는 일반 토큰: GM만 조작 가능
     throw new ForbiddenException(
       TOKEN_ERROR_MESSAGES[TokenErrorCode.NO_MOVE_PERMISSION],
     );

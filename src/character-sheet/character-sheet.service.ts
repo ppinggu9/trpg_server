@@ -1,4 +1,3 @@
-// src/charactersheet/services/character-sheet.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -16,6 +15,7 @@ import { CharacterSheetValidatorService } from './character-sheet-validator.serv
 import { S3Service } from '@/s3/s3.service';
 import { nanoid } from 'nanoid';
 import { validateImageUpload } from '@/common/utils/validate-image-upload';
+import { ParticipantRole } from '@/common/enums/participant-role.enum';
 
 @Injectable()
 export class CharacterSheetService {
@@ -32,24 +32,20 @@ export class CharacterSheetService {
     createDto: CreateCharacterSheetDto,
     requesterUserId: number,
   ) {
-    // soft삭제는 남겨놓긴했지만 시나리오상 캐릭터시트는 삭제를 지원하면 안된다.
     const existingSheet = await this.characterSheetRepository.findOne({
       where: { participant: { id: participantId } },
     });
 
-    // 존재확인
     if (existingSheet) {
       throw new ConflictException(CHARACTER_SHEET_ERRORS.SHEET_ALREADY_EXISTS);
     }
 
-    // 참여자 확인
     const participant =
       await this.roomParticipantService.getParticipantById(participantId);
     if (!participant) {
       throw new NotFoundException(CHARACTER_SHEET_ERRORS.PARTICIPANT_NOT_FOUND);
     }
 
-    // 일치여부 확인
     if (participant.user.id !== requesterUserId) {
       throw new ForbiddenException(CHARACTER_SHEET_ERRORS.OWNERSHIP_REQUIRED);
     }
@@ -135,7 +131,6 @@ export class CharacterSheetService {
     return { presignedUrl, publicUrl, key };
   }
 
-  // token에서 쓴다
   async getCharacterSheetById(sheetId: number, requesterUserId: number) {
     const sheet = await this.findSheetWithRelations(sheetId);
     if (!sheet) {
@@ -151,6 +146,39 @@ export class CharacterSheetService {
       return false;
     }
     return sheet.participant?.user?.id === userId;
+  }
+
+  async getCharacterSheetsByRoom(
+    roomId: string,
+    requesterUserId: number,
+  ): Promise<CharacterSheet[]> {
+    // 1. 요청자가 해당 방에 참여하고 있는지 확인
+    const requesterParticipant =
+      await this.roomParticipantService.getParticipantByUserIdAndRoomId(
+        requesterUserId,
+        roomId,
+      );
+    if (!requesterParticipant) {
+      throw new ForbiddenException(CHARACTER_SHEET_ERRORS.NO_READ_PERMISSION);
+    }
+
+    // 2. 방에 속한 모든 참여자의 캐릭터 시트 조회
+    const sheets = await this.characterSheetRepository
+      .createQueryBuilder('sheet')
+      .leftJoinAndSelect('sheet.participant', 'participant')
+      .leftJoinAndSelect('participant.user', 'user')
+      .leftJoinAndSelect('participant.room', 'room')
+      .where('room.id = :roomId', { roomId })
+      .getMany();
+
+    // 3. 권한에 따른 필터링 적용
+    const isRequesterGM = requesterParticipant.role === ParticipantRole.GM;
+    const filteredSheets = sheets.filter((sheet) => {
+      const isOwner = sheet.participant.user.id === requesterUserId;
+      return isRequesterGM || isOwner || sheet.isPublic;
+    });
+
+    return filteredSheets;
   }
 
   private async findSheetWithRelations(sheetId: number) {

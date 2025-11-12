@@ -54,8 +54,6 @@ export class TokenService {
       npcId: dto.npcId,
     });
 
-    console.log('[DEBUG] createToken - token to save:', token);
-
     const saved = await this.tokenRepository.save(token);
     const responseDto = this.toResponseDto(saved);
 
@@ -64,7 +62,6 @@ export class TokenService {
       new TokenCreatedEvent(mapId, responseDto),
     );
 
-    console.log('[DEBUG] createToken - saved token:', saved);
     return responseDto;
   }
 
@@ -95,10 +92,7 @@ export class TokenService {
   ): Promise<TokenResponseDto[]> {
     await this.validator.validateMapAccess(mapId, userId);
     const tokens = await this.tokenRepository.find({ where: { mapId } });
-    console.log('[DEBUG] getTokensByMap - raw tokens from DB:', tokens);
-
     const responseDtos = tokens.map((t) => this.toResponseDto(t));
-    console.log('[DEBUG] getTokensByMap - response DTOs:', responseDtos);
     return responseDtos;
   }
 
@@ -115,7 +109,6 @@ export class TokenService {
     );
   }
 
-  //vtt gateway에서 token을 받아올때 사용한다
   async getTokensByMapForUser(
     mapId: string,
     userId: number,

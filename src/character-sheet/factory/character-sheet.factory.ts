@@ -39,7 +39,6 @@ export const createCharacterSheet = (
   options: Partial<CharacterSheet> = {},
 ): CharacterSheet => {
   const sheet = new CharacterSheet();
-  // Trpgsystem은 room에서 생성되므로 room.service을 통해 생성된 값을 받아야한다.
   sheet.id = options.id ?? faker.number.int({ min: 1, max: 10000 });
   sheet.data = options.data ?? {
     name: faker.person.fullName(),
@@ -54,12 +53,6 @@ export const createCharacterSheet = (
   sheet.createdAt = options.createdAt ?? faker.date.past();
   sheet.updatedAt = options.updatedAt ?? faker.date.recent();
 
-  sheet.participant =
-    options.participant ??
-    createParticipantEntity({
-      // 필요시, 이 팩토리 내에서만 특별히 설정하고 싶은 Participant 옵션
-      // 예: characterSheet: sheet (순환 참조 주의, 보통은 하지 않음)
-      // role: ParticipantRole.PLAYER,
-    });
+  sheet.participant = options.participant ?? createParticipantEntity({});
   return Object.assign(sheet, options);
 };

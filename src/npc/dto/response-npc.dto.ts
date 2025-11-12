@@ -1,4 +1,3 @@
-// src/npc/dto/npc-response.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 import { Npc } from '../entities/npc.entity';
@@ -15,7 +14,6 @@ export class NpcResponseDto {
       level: 10,
       hp: 80,
       ac: 15,
-      // imageUrl: 'https://d12345.cloudfront.net/.../gandalf.png',
     },
     description:
       'TRPG NPC/몬스터 데이터. 구조는 룰북(dnd5e, coc7e 등)에 따라 동적입니다.\n' +
@@ -65,10 +63,6 @@ export class NpcResponseDto {
   updatedAt: Date;
 
   static fromEntity(entity: Npc): NpcResponseDto {
-    // console.log(
-    //   `[NPC DTO DEBUG] NPC ID ${entity.id} loaded type:`,
-    //   entity.type,
-    // );
     return {
       id: entity.id,
       data: entity.data,

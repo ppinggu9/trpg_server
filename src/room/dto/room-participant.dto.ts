@@ -2,7 +2,7 @@ import { ParticipantRole } from '@/common/enums/participant-role.enum';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RoomParticipantDto {
-  @ApiProperty({ description: '사용자 ID' })
+  @ApiProperty({ description: '참가자 ID(고유)' })
   id: number;
 
   @ApiProperty({ description: '사용자 이름' })

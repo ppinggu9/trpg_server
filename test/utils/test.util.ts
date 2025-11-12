@@ -13,6 +13,7 @@ import { LoginUserDto } from '@/auth/dto/login-user.dto';
 import { AppModule } from '@/app.module';
 import { TestDbModule } from './test-db.e2e.module';
 import { S3Service } from '@/s3/s3.service';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 export interface TestApp {
   app: INestApplication;
@@ -49,6 +50,8 @@ export async function setupTestApp(): Promise<TestApp> {
 
   const module: TestingModule = await moduleBuilder.compile();
   const app = module.createNestApplication();
+  const httpServer = app.getHttpServer();
+  app.useWebSocketAdapter(new IoAdapter(httpServer));
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
@@ -57,6 +60,7 @@ export async function setupTestApp(): Promise<TestApp> {
     }),
   );
   await app.init();
+  app.listen(0);
 
   return {
     app,

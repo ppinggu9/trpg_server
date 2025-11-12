@@ -57,11 +57,9 @@ export class Room {
   @DeleteDateColumn()
   deletedAt: Date | null;
 
-  // 방 참여자 목록
   @OneToMany(() => RoomParticipant, (participant) => participant.room)
   participants: RoomParticipant[];
 
-  // 방 생성자
   @OneToOne(() => User, (user) => user.createdRoom, {
     nullable: true,
     onDelete: 'SET NULL',

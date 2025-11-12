@@ -10,7 +10,6 @@ import { TrpgSystem } from '@/common/enums/trpg-system.enum';
 export const createRoomEntity = (options: Partial<Room> = {}): Room => {
   const room = new Room();
 
-  // 기본값 설정
   room.id = options.id ?? uuidv4();
   room.system =
     options.system ?? faker.helpers.arrayElement(Object.values(TrpgSystem));
@@ -38,7 +37,6 @@ export const createParticipantEntity = (
 ): RoomParticipant => {
   const participant = new RoomParticipant();
 
-  // 명시되지 않은 값은 undefined 유지
   participant.id = overrides.id ?? 1;
   participant.room = overrides.room ?? undefined;
   participant.user = overrides.user ?? createUserEntity();

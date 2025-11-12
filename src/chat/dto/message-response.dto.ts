@@ -1,5 +1,3 @@
-// src/chat/dto/message-response.dto.ts
-
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsString, IsDate } from 'class-validator';
 import { ChatMessage } from '../entities/chat-message.entity';
@@ -30,7 +28,7 @@ export class MessageResponseDto {
   static fromEntity(entity: ChatMessage): MessageResponseDto {
     const dto = new MessageResponseDto();
     dto.id = entity.id;
-    dto.senderId = entity.sender.id; // 엔티티의 관계 필드 사용
+    dto.senderId = entity.sender.id;
     dto.content = entity.content;
     dto.sentAt = entity.sentAt;
     return dto;

@@ -59,3 +59,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # db migration
 /src/db/migrations/*
+
+# Docker
+docker.compose.yaml
+docker-entrypoint.sh

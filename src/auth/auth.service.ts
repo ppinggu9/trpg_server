@@ -8,11 +8,12 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { RefreshTokenRepository } from './refresh-token.repository';
-import { jwtPayloadDto } from './types/jwt-payload.dto';
+import { jwtPayloadDto, jwtValidatedOutputDto } from './types/jwt-payload.dto';
 import { User } from '@/users/entities/user.entity';
 import { Transactional } from 'typeorm-transactional';
 import { LoginResponseDto } from './dto/login-response.dto';
 import * as crypto from 'crypto';
+import { WsException } from '@nestjs/websockets';
 
 @Injectable()
 export class AuthService {
@@ -126,7 +127,7 @@ export class AuthService {
 
       return {
         access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
-        refresh_token: newRefreshToken, // 새로운 리프레시 토큰 반환
+        refresh_token: newRefreshToken,
       };
     } catch (error) {
       if (error.status === 401) {
@@ -142,9 +143,9 @@ export class AuthService {
       const payload = this.jwtService.verify(token, {
         secret: this.configService.get<string>('JWT_SECRET', 'mysecretkey'),
       });
-      return !!payload; // 유효한 토큰이면 true 반환
+      return !!payload;
     } catch (error) {
-      return false; // 토큰이 유효하지 않으면 false 반환
+      return false;
     }
   }
 
@@ -162,6 +163,18 @@ export class AuthService {
       }
       console.error(error);
       throw new InternalServerErrorException('Logout failed.');
+    }
+  }
+
+  async validateTokenForAnyContext(
+    token: string,
+  ): Promise<jwtValidatedOutputDto> {
+    try {
+      return await this.jwtService.verifyAsync<jwtValidatedOutputDto>(token, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+      });
+    } catch (error) {
+      throw new WsException('Invalid token');
     }
   }
 }

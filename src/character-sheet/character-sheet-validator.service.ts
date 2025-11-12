@@ -1,5 +1,3 @@
-// src/charactersheet/services/character-sheet-validator.service.ts
-
 import {
   Injectable,
   ForbiddenException,
@@ -42,7 +40,6 @@ export class CharacterSheetValidatorService {
   ): Promise<void> {
     const isRequesterOwner = sheet.participant.user.id === requesterUserId;
 
-    // [핵심] 요청자가 해당 방의 GM인지 확인
     const requesterParticipant =
       await this.roomParticipantService.getParticipantByUserId(requesterUserId);
     const isRequesterGM = requesterParticipant?.role === ParticipantRole.GM;
@@ -71,7 +68,6 @@ export class CharacterSheetValidatorService {
     );
   }
 
-  //이미지 업로드 전용
   async validateUploadAccess(
     participantId: number,
     requesterUserId: number,

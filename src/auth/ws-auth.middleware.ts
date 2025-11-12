@@ -1,12 +1,8 @@
-// src/auth/ws-auth.middleware.ts
 import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { Socket } from 'socket.io';
-import { jwtValidatedOutputDto } from './types/jwt-payload.dto';
 import { WsException } from '@nestjs/websockets';
+import { AuthService } from './auth.service';
 
-// ✅ 핵심: Socket.IO 미들웨어 타입 정의
 export type SocketMiddleware = (
   socket: Socket,
   next: (err?: Error) => void,
@@ -14,34 +10,40 @@ export type SocketMiddleware = (
 
 @Injectable()
 export class WsAuthMiddleware {
-  constructor(
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
-  // ✅ 핵심: Socket.IO 미들웨어를 반환하는 팩토리 메서드
   createMiddleware(): SocketMiddleware {
-    return async (socket: Socket, next: (err?: Error) => void) => {
+    return async (socket, next) => {
       try {
-        const authHeader = socket.handshake.headers.authorization;
-        if (!authHeader) {
-          throw new WsException('No token provided');
-        }
+        let token: string | undefined;
 
-        const token = authHeader.split(' ')[1];
-        if (!token) {
-          throw new WsException('Invalid token format');
+        // Socket.IO 공식 방식
+        if (socket.handshake.auth?.token) {
+          token = socket.handshake.auth.token;
+          // Bearer 접두사 자동 제거
+          if (token.startsWith('Bearer ')) {
+            token = token.substring(7);
+          }
         }
+        // if (!token) {
+        //   token = socket.handshake.query.token as string;
+        // }
+
+        // if (!token) {
+        //   const authHeader = socket.handshake.headers.authorization;
+        //   token = authHeader?.split(' ')[1];
+        // }
+
+        if (!token) throw new WsException('No token provided');
 
         const payload =
-          await this.jwtService.verifyAsync<jwtValidatedOutputDto>(token, {
-            secret: this.configService.get<string>('JWT_SECRET', 'mysecretkey'),
-          });
-
+          await this.authService.validateTokenForAnyContext(token);
         socket.data.user = payload;
-        next(); // 인증 성공
+        next();
       } catch (error) {
-        next(new WsException('Authentication failed')); // 인증 실패
+        next(
+          error instanceof Error ? error : new Error('Authentication failed'),
+        );
       }
     };
   }

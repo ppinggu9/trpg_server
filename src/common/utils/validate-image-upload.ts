@@ -1,4 +1,3 @@
-// src/common/utils/validate-image-upload.ts
 import { BadRequestException } from '@nestjs/common';
 import { ImageMimeType } from '@/common/enums/image-mime-type.enum';
 import { EXTENSION_TO_MIME } from '@/common/constants/image-mime-map';

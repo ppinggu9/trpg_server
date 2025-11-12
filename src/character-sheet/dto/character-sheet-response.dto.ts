@@ -39,8 +39,6 @@ export class CharacterSheetResponseDto {
     example: {
       name: 'Legolas',
       level: 5,
-      // imageUrl:
-      //   'https://d12345.cloudfront.net/uploads/characters/.../avatar.png',
       class: 'Ranger',
       race: 'Elf',
       hp: 45,

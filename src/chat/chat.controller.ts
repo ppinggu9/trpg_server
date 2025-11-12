@@ -1,5 +1,3 @@
-// src/chat/chat.controller.ts
-
 import {
   Controller,
   Post,
@@ -37,7 +35,6 @@ import { RequestWithUser } from '@/auth/types/request-with-user.dto';
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
-  // 1. 채팅방 생성
   @Post('rooms')
   @ApiOperation({ summary: '새로운 채팅방 생성' })
   @ApiBody({ type: CreateChatRoomDto })
@@ -58,7 +55,6 @@ export class ChatController {
     };
   }
 
-  // 2. 메시지 배치 저장
   @Post('messages')
   @ApiOperation({ summary: '여러 메시지를 한 번에 저장' })
   @ApiBody({ type: CreateChatMessagesDto })
@@ -75,7 +71,6 @@ export class ChatController {
     return this.chatService.createMessages(userId, createMessagesDto);
   }
 
-  // 3. 방의 최근 메시지 조회
   @Get('rooms/:roomId/messages')
   @ApiOperation({ summary: '특정 방의 최근 메시지 목록 조회' })
   @ApiParam({ name: 'roomId', description: '조회할 채팅방 ID', type: 'number' })
@@ -92,7 +87,6 @@ export class ChatController {
     return this.chatService.getRecentMessages(userId, roomId);
   }
 
-  // 4. 채팅방 삭제
   @Delete('rooms/:roomId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '채팅방 삭제 (방장만 가능)' })
@@ -106,7 +100,6 @@ export class ChatController {
     await this.chatService.deleteChatRoom(userId, roomId);
   }
 
-  // 5. 사용자 초대 API
   @Post('rooms/:roomId/invite')
   @ApiOperation({ summary: '채팅방에 사용자 초대 (방장만 가능)' })
   @ApiParam({ name: 'roomId', description: '초대할 채팅방 ID', type: 'number' })
@@ -127,7 +120,6 @@ export class ChatController {
     await this.chatService.inviteUser(inviterId, roomId, inviteUserDto.userId);
   }
 
-  // 6. 사용자 퇴장 API
   @Delete('rooms/:roomId/users/:userId')
   @ApiOperation({ summary: '채팅방에서 사용자 퇴장 (방장 또는 본인만 가능)' })
   @ApiParam({

@@ -1,4 +1,3 @@
-// src/npc/entities/npc.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,

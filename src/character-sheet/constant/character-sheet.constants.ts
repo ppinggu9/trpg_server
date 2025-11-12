@@ -1,5 +1,3 @@
-// src/charactersheet/constants/character-sheet.constants.ts
-
 export const CHARACTER_SHEET_MESSAGES = {
   CREATED: '캐릭터 시트가 성공적으로 생성되었습니다.',
   RETRIEVED: '캐릭터 시트를 조회했습니다.',

@@ -19,13 +19,11 @@ export class RoomParticipantService {
     private readonly roomParticipantRepository: Repository<RoomParticipant>,
   ) {}
 
-  // 방 참가 처리
   async addParticipant(
     room: Room,
     user: User,
     role: ParticipantRole = ParticipantRole.PLAYER,
   ): Promise<void> {
-    // 현재 참여 중인지 확인 (leftAt이 null인 기록이 있는지)
     const activeParticipation = await this.roomParticipantRepository.findOne({
       where: {
         room: { id: room.id },
@@ -48,7 +46,6 @@ export class RoomParticipantService {
     await this.roomParticipantRepository.save(participant);
   }
 
-  // 방 나가기 처리
   async leaveRoom(userId: number, roomId: string): Promise<void> {
     const participation = await this.roomParticipantRepository.findOne({
       where: { user: { id: userId }, room: { id: roomId } },
@@ -56,13 +53,12 @@ export class RoomParticipantService {
     });
 
     if (!participation || participation.leftAt) {
-      return; // 멱등성 보장
+      return;
     }
 
     await this.roomParticipantRepository.softDelete(participation.id);
   }
 
-  // 해당 유저 모든 방 나가기, userService의 softdelete시 사용
   async leaveAllRoomsByUserId(userId: number): Promise<DeleteResult> {
     const participations = await this.roomParticipantRepository.find({
       where: { user: { id: userId } },
@@ -78,7 +74,6 @@ export class RoomParticipantService {
     return deleteResult;
   }
 
-  // 방이 삭제될 때 모든 참가자를 한 번에 나가게 처리
   async leaveAllUsersFromRoom(roomId: string): Promise<void> {
     const participations = await this.roomParticipantRepository.find({
       where: { room: { id: roomId } },
@@ -92,7 +87,6 @@ export class RoomParticipantService {
     await this.roomParticipantRepository.softDelete(participationIds);
   }
 
-  // 참여자 목록 조회
   async getActiveParticipants(roomId: string): Promise<RoomParticipantDto[]> {
     const participants = await this.roomParticipantRepository.find({
       where: { room: { id: roomId } },
@@ -116,14 +110,12 @@ export class RoomParticipantService {
     }));
   }
 
-  // 참여자수 확인
   async getActiveParticipantsCount(roomId: string): Promise<number> {
     return this.roomParticipantRepository.count({
       where: { room: { id: roomId } },
     });
   }
 
-  // 참여자가 있는지
   async getParticipant(
     roomId: string,
     userId: number,
@@ -133,7 +125,6 @@ export class RoomParticipantService {
     });
   }
 
-  // 참여자 역할 업데이트 메서드
   async updateParticipantRole(
     participantId: number,
     newRole: ParticipantRole,
@@ -157,14 +148,8 @@ export class RoomParticipantService {
 
     participant.role = newRole;
     await this.roomParticipantRepository.save(participant);
-
-    // console.log(
-    //   `[DEBUG] Updated participant ${participantId} role to:`,
-    //   newRole,
-    // );
   }
 
-  // 밑에 2개는 charactersheet에서 권한여부를 위해 사용
   async getParticipantById(
     participantId: number,
   ): Promise<RoomParticipant | null> {

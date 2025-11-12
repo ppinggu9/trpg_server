@@ -1,11 +1,8 @@
 export const ROOM_MESSAGES = {
   CREATED: '방이 성공적으로 생성되었습니다.',
   JOINED: '방에 성공적으로 참가했습니다.',
-  //   void로 설정해서 처음부터 메시지를 안 줄려고 했습니다.LEFT: '방을 성공적으로 나갔습니다.',
-  //   DELETED: '방이 성공적으로 삭제되었습니다.',
   CREATOR_TRANSFERRED: '방장이 성공적으로 위임되었습니다.',
   ROLE_UPDATED: '참여자의 역할이 성공적으로 변경되었습니다.',
-  // 추기로 방 참가자 목록 조회 또한 메시지를 작성 x
 } as const;
 
 export const ROOM_ERRORS = {
@@ -30,7 +27,6 @@ export const ROOM_ERRORS = {
   ROOM_ALREADY_DELETED: '이미 삭제된 방입니다.',
   ROOM_JOIN_CONFLICT: '방 참가 처리 중 다른 요청으로 인해 방이 삭제되었습니다.',
 
-  // validate
   CANNOT_TRANSFER_TO_SELF: '자신에게 방장 권한을 위임할 수 없습니다.',
   ROOM_FULL: '방이 꽉 찼습니다.',
   INVALID_PARTICIPANT_ROLE: '유효하지 않은 참여자 역할입니다.',

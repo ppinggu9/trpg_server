@@ -71,9 +71,7 @@ export class VttMapService {
       room,
     });
 
-    console.log('[Service] About to save entity:', vttMap);
     const savedVttMap = await this.vttMapRepository.save(vttMap);
-    console.log('[Service] Saved entity:', savedVttMap);
 
     this.eventEmitter.emit(
       'map.created',
@@ -86,7 +84,6 @@ export class VttMapService {
     };
   }
 
-  // 맵 단건 조회 (참여자 가능)
   async getVttMap(vttMapId: string, userId: number): Promise<VttMap> {
     const vttMap = await this.vttMapValidatorService.validateReadAccessToMap(
       vttMapId,
@@ -95,13 +92,11 @@ export class VttMapService {
     return vttMap;
   }
 
-  // 의 모든 맵 조회 (참여자 가능)
   async getVttMapsByRoomId(roomId: string, userId: number): Promise<VttMap[]> {
     await this.vttMapValidatorService.validateParticipantAccess(roomId, userId);
     return this.vttMapRepository.find({ where: { roomId } });
   }
 
-  // 맵 업데이트 (GM 전용, vttMapId 기반)
   async updateVttMap(
     vttMapId: string,
     userId: number,
@@ -118,7 +113,6 @@ export class VttMapService {
     Object.assign(vttMap, updateFields);
 
     const updated = await this.vttMapRepository.save(vttMap);
-    console.log('[Event] Emitting map.updated for', vttMapId);
     this.eventEmitter.emit(
       'map.updated',
       new MapUpdatedEvent(vttMapId, {

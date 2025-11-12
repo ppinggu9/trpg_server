@@ -73,9 +73,6 @@ export class RoomController {
     @Body() createRoomDto: CreateRoomDto,
     @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
-    // console.log(
-    //   `[CREATE] 사용자 ${req.user.id} 요청 - name: "${createRoomDto.name}", system: ${createRoomDto.system}`,
-    // );
     return this.roomService.createRoom(createRoomDto, req.user.id);
   }
 
@@ -113,9 +110,6 @@ export class RoomController {
     @Body() joinRoomDto: JoinRoomDto,
     @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
-    // console.log(
-    //   `[JOIN] 사용자 ${req.user.id} → 방 ${roomId} (비밀번호 길이: ${joinRoomDto.password.length})`,
-    // );
     return this.roomService.joinRoom(roomId, req.user.id, joinRoomDto);
   }
 
@@ -139,7 +133,6 @@ export class RoomController {
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Req() req: RequestWithUser,
   ): Promise<void> {
-    // console.log(`[LEAVE] 사용자 ${req.user.id} → 방 나가기: ${roomId}`);
     await this.roomService.leaveRoom(req.user.id, roomId);
   }
 
@@ -163,7 +156,6 @@ export class RoomController {
     @Param('roomId', ParseUUIDPipe) roomId: string,
     @Req() req: RequestWithUser,
   ): Promise<void> {
-    // console.log(`[DELETE] 사용자 ${req.user.id} → 방 삭제 요청: ${roomId}`);
     await this.roomService.deleteRoom(roomId, req.user.id);
   }
 
@@ -200,9 +192,6 @@ export class RoomController {
     @Body() dto: TransferCreatorDto,
     @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
-    // console.log(
-    //   `[TRANSFER] 방장 위임 - 방: ${roomId}, 기존: ${req.user.id}, 신임: ${dto.newCreatorId}`,
-    // );
     return this.roomService.transferCreator(
       roomId,
       req.user.id,
@@ -249,9 +238,6 @@ export class RoomController {
     @Body() dto: UpdateParticipantRoleDto,
     @Req() req: RequestWithUser,
   ): Promise<RoomOperationResponseDto> {
-    // console.log(
-    //   `[UPDATE_ROLE] User ${req.user.id} changing role of ${userId} to ${dto.role} in room ${roomId}`,
-    // );
     return this.roomService.updateParticipantRole(
       roomId,
       req.user.id,
@@ -281,11 +267,6 @@ export class RoomController {
   async getParticipantsOnly(
     @Param('roomId', ParseUUIDPipe) roomId: string,
   ): Promise<RoomParticipantDto[]> {
-    // const participants = await this.roomService.getParticipantsOnly(roomId);
-    // console.log(
-    //   `[GET_PARTICIPANTS] 방 ${roomId} 참여자 목록 조회 결과:`,
-    //   participants,
-    // );
     return this.roomService.getParticipantsOnly(roomId);
   }
 
@@ -309,9 +290,7 @@ export class RoomController {
   })
   async getRoom(
     @Param('roomId', ParseUUIDPipe) roomId: string,
-    // @Req() req: RequestWithUser,
   ): Promise<RoomResponseDto> {
-    // console.log(`[GET_ROOM] 사용자 ${req.user.id} → 방 정보 조회: ${roomId}`);
     return this.roomService.getRoomWithParticipants(roomId);
   }
 }

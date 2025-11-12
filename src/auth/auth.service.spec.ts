@@ -201,6 +201,7 @@ describe('AuthService', () => {
         createdRoom: null,
         currentRoom: null,
         roomParticipant: null,
+        chatParticipants: null,
       };
       jest
         .spyOn(refreshTokenRepo, 'findValidToken')

@@ -1,5 +1,3 @@
-// src/chat/dto/chat-room-response.dto.ts
-
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsNumber,

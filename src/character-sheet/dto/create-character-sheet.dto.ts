@@ -1,4 +1,3 @@
-// src/charactersheet/dto/create-character-sheet.dto.ts
 import { IsObject, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 

@@ -19,7 +19,6 @@ export class VttMapValidatorService {
     private readonly vttMapRepository: Repository<VttMap>,
   ) {}
 
-  // 참여자 검증 (조회/읽기 권한 전제)
   async validateParticipantAccess(
     roomId: string,
     userId: number,
@@ -35,7 +34,6 @@ export class VttMapValidatorService {
     return participant;
   }
 
-  // GM 전용 작업 검증
   async validateGmAccess(roomId: string, userId: number): Promise<void> {
     const participant = await this.validateParticipantAccess(roomId, userId);
     if (participant.role !== ParticipantRole.GM) {
@@ -63,7 +61,6 @@ export class VttMapValidatorService {
     return vttMap;
   }
 
-  // 참여자가 특정 맵을 조회할 수 있는지 (현재는 모두 공개 → 향후 isPublic 추가 시 확장)
   async validateReadAccessToMap(
     vttMapId: string,
     userId: number,

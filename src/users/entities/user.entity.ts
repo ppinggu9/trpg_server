@@ -57,7 +57,6 @@ export class User {
   @DeleteDateColumn()
   deletedAt: Date | null;
 
-  // 유저가 생성한 방
   @OneToOne(() => Room, (room) => room.creator, {
     nullable: true,
     onDelete: 'SET NULL',
@@ -65,11 +64,9 @@ export class User {
   @JoinColumn({ name: 'created_room_id' })
   createdRoom: Room | null;
 
-  // 유저가 참여한 방 목록
   @OneToMany(() => RoomParticipant, (participant) => participant.user)
   roomParticipant: RoomParticipant[];
 
-  // (옵션) 현재 참여 중인 방
   @ManyToOne(() => Room)
   @JoinColumn({ name: 'current_room_id' })
   currentRoom: Room | null;

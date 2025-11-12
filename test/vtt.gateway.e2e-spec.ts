@@ -5,7 +5,6 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '@/users/entities/user.entity';
 import { createUserDto } from '@/users/factory/user.factory';
-import { io } from 'socket.io-client';
 import { Token } from '@/token/entities/token.entity';
 import { VttMap } from '@/vttmap/entities/vttmap.entity';
 import { Room } from '@/room/entities/room.entity';
@@ -26,41 +25,8 @@ import { TokenService } from '@/token/token.service';
 import { VTTMAP_ERRORS } from '@/vttmap/constants/vttmap.constants';
 import * as request from 'supertest';
 import { TokenResponseDto } from '@/token/dto/token-response.dto';
-
-// 테스트용 WebSocket 클라이언트 타입
-type TestSocket = ReturnType<typeof io> & {
-  waitForEvent: (event: string, timeoutMs?: number) => Promise<any>;
-};
-
-// WebSocket 클라이언트 생성 헬퍼
-function createSocketClient(
-  url: string,
-  token: string,
-  options: Parameters<typeof io>[1] = {},
-): TestSocket {
-  const socket = io(url, {
-    ...options,
-    extraHeaders: {
-      authorization: `Bearer ${token}`,
-    },
-    transports: ['websocket'],
-  }) as TestSocket;
-
-  socket.waitForEvent = (event: string, timeoutMs = 5000) => {
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        socket.off(event);
-        reject(new Error(`Timeout waiting for event: ${event}`));
-      }, timeoutMs);
-
-      socket.once(event, (data) => {
-        clearTimeout(timeout);
-        resolve(data);
-      });
-    });
-  };
-  return socket;
-}
+import { createTestSocket, TestSocket } from './utils/socket-helper';
+import { AddressInfo } from 'net';
 
 function waitForSocketEvent<T>(
   socket: TestSocket,
@@ -102,11 +68,14 @@ describe('VttGateway (e2e) - WebSocket', () => {
     .fill('')
     .map(() => createUserDto());
 
-  const GATEWAY_URL = 'http://localhost:11123/vtt';
+  let GATEWAY_URL: string;
 
   beforeAll(async () => {
     const testApp = await setupTestApp();
     ({ app, module } = testApp);
+
+    const address = app.getHttpServer().address() as AddressInfo;
+    GATEWAY_URL = `ws://localhost:${address.port}/vtt`;
 
     userRepository = module.get(getRepositoryToken(User));
     roomRepository = module.get(getRepositoryToken(Room));
@@ -163,7 +132,7 @@ describe('VttGateway (e2e) - WebSocket', () => {
   describe('WebSocket Connection & Authentication', () => {
     it('S-GW-1: 유효한 JWT 토큰으로 연결 성공', async () => {
       // ✅ Given: 유효한 토큰으로 소켓 생성
-      const socket = createSocketClient(GATEWAY_URL, accessTokens[0]);
+      const socket = createTestSocket(GATEWAY_URL, accessTokens[0]);
 
       // ✅ When: 연결 대기
       await new Promise<void>((resolve, reject) => {
@@ -183,7 +152,7 @@ describe('VttGateway (e2e) - WebSocket', () => {
 
     it('F-VTT-GW-1: 유효하지 않은 토큰으로 연결 실패', async () => {
       // ✅ Given: 유효하지 않은 토큰으로 소켓 생성
-      const socket = createSocketClient(GATEWAY_URL, 'invalid.token.here');
+      const socket = createTestSocket(GATEWAY_URL, 'invalid.token.here');
 
       // ✅ When & Then: 연결 실패 확인
       await expect(
@@ -203,7 +172,7 @@ describe('VttGateway (e2e) - WebSocket', () => {
 
     it('F-VTT-GW-2: 토큰 없이 연결 시도 실패', async () => {
       // ✅ Given: 토큰 없이 소켓 생성
-      const socket = createSocketClient(GATEWAY_URL, '');
+      const socket = createTestSocket(GATEWAY_URL, '');
 
       // ✅ When & Then: 연결 실패 확인
       await expect(
@@ -288,8 +257,8 @@ describe('VttGateway (e2e) - WebSocket', () => {
       tokenId = token.id;
 
       // WebSocket 연결 (joinMap은 테스트마다 직접 호출)
-      socketGM = createSocketClient(GATEWAY_URL, gmToken);
-      socketPlayer = createSocketClient(GATEWAY_URL, playerToken);
+      socketGM = createTestSocket(GATEWAY_URL, gmToken);
+      socketPlayer = createTestSocket(GATEWAY_URL, playerToken);
 
       await Promise.all([
         new Promise<void>((resolve) => socketGM.on('connect', resolve)),
@@ -526,8 +495,8 @@ describe('VttGateway (e2e) - WebSocket', () => {
       });
       console.log('✅ BeforeEach: 방 생성 완료');
       // WebSocket 연결
-      socketGM = createSocketClient(GATEWAY_URL, gmToken);
-      socketPlayer = createSocketClient(GATEWAY_URL, playerToken);
+      socketGM = createTestSocket(GATEWAY_URL, gmToken);
+      socketPlayer = createTestSocket(GATEWAY_URL, playerToken);
 
       await Promise.all([
         new Promise<void>((resolve) => socketGM.on('connect', resolve)),
@@ -655,7 +624,7 @@ describe('VttGateway (e2e) - WebSocket', () => {
 
       // ✅ 테스트 내부에서만 outsider 생성
       const outsiderToken = await signUpAndLogin(app, createUserDto());
-      const socketOutsider = createSocketClient(GATEWAY_URL, outsiderToken);
+      const socketOutsider = createTestSocket(GATEWAY_URL, outsiderToken);
       await new Promise<void>((resolve) =>
         socketOutsider.on('connect', resolve),
       );

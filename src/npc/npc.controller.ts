@@ -1,4 +1,3 @@
-// src/npc/controllers/npc.controller.ts
 import {
   Controller,
   Post,
@@ -84,17 +83,6 @@ export class NpcController {
     @Req() req: RequestWithUser,
   ) {
     const npc = await this.npcService.createNpc(roomId, dto, req.user.id);
-    console.log(
-      `[DEBUG NPC.create] Created NPC for room ${roomId}, GM ${req.user.id}:`,
-      {
-        id: npc.id,
-        type: npc.type,
-        isPublic: npc.isPublic,
-        roomId: npc.roomId,
-        trpgType: npc.trpgType,
-        data: npc.data,
-      },
-    );
     return NpcResponseDto.fromEntity(npc);
   }
 
@@ -181,17 +169,6 @@ export class NpcController {
     @Req() req: RequestWithUser,
   ) {
     const npc = await this.npcService.getNpc(npcId, req.user.id);
-    console.log(
-      `[DEBUG NPC.findOne] Loaded NPC ${npcId} for user ${req.user.id}:`,
-      {
-        id: npc.id,
-        type: npc.type,
-        isPublic: npc.isPublic,
-        roomId: npc.roomId,
-        trpgType: npc.trpgType,
-        data: npc.data,
-      },
-    );
     return NpcResponseDto.fromEntity(npc);
   }
 
@@ -228,17 +205,6 @@ export class NpcController {
     @Req() req: RequestWithUser,
   ) {
     const npc = await this.npcService.updateNpc(npcId, dto, req.user.id);
-    console.log(
-      `[DEBUG NPC.update] Updated NPC ${npcId} by user ${req.user.id}:`,
-      {
-        id: npc.id,
-        type: npc.type,
-        isPublic: npc.isPublic,
-        roomId: npc.roomId,
-        trpgType: npc.trpgType,
-        data: npc.data,
-      },
-    );
     return NpcResponseDto.fromEntity(npc);
   }
 
@@ -309,15 +275,6 @@ export class NpcController {
     type?: NpcType,
   ) {
     const npcs = await this.npcService.getNpcsByRoom(roomId, req.user.id, type);
-    console.log(
-      `[DEBUG getNpcsByRoom] Found ${npcs.length} NPCs for room ${roomId}, user ${req.user.id}, type filter: ${type}`,
-      npcs.map((n) => ({
-        id: n.id,
-        type: n.type,
-        isPublic: n.isPublic,
-        roomId: n.roomId,
-      })),
-    );
     return npcs.map(NpcResponseDto.fromEntity);
   }
 }

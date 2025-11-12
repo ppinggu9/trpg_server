@@ -1,4 +1,3 @@
-// src/charactersheet/entities/character-sheet.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,

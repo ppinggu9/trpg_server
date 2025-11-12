@@ -1,5 +1,3 @@
-// src/chat/dto/chat-room-operation-response.dto.ts
-
 import { ApiProperty } from '@nestjs/swagger';
 import { ChatRoomResponseDto } from './chat-room-response.dto';
 

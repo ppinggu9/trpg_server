@@ -1,4 +1,3 @@
-// src/npc/dto/create-npc.dto.ts
 import { IsObject, IsBoolean, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { NpcType } from '@/common/enums/npc-type.enum';

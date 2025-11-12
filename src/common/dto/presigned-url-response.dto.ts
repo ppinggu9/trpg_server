@@ -1,4 +1,3 @@
-// presigned-url-response.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 
 export class PresignedUrlResponseDto {

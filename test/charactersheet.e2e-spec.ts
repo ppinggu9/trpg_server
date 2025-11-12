@@ -389,6 +389,227 @@ describe('CharacterSheetController (e2e)', () => {
     });
   });
 
+  describe('UC-05: 방 내 캐릭터 시트 목록 조회', () => {
+    let playerSheet: CharacterSheet;
+    let gmSheet: CharacterSheet;
+    let otherPlayerSheet: CharacterSheet;
+
+    beforeEach(async () => {
+      // 각 참여자당 하나의 캐릭터 시트만 생성 (OneToOne 관계 존중)
+      [playerSheet, gmSheet, otherPlayerSheet] =
+        await characterSheetRepository.save([
+          createCharacterSheet({
+            participant: playerParticipant,
+            trpgType: testRoom.system,
+            data: { name: 'Player Character' },
+            isPublic: true, // 기본값: 공개
+          }),
+          createCharacterSheet({
+            participant: gmParticipant,
+            trpgType: testRoom.system,
+            data: { name: 'GM Character' },
+            isPublic: false, // 기본값: 비공개
+          }),
+          createCharacterSheet({
+            participant: otherPlayerParticipant,
+            trpgType: testRoom.system,
+            data: { name: 'Other Player Character' },
+            isPublic: true, // 기본값: 공개
+          }),
+        ]);
+    });
+
+    it('성공: GM은 방 내 모든 캐릭터 시트 목록을 조회할 수 있어야 한다', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/character-sheets`)
+        .query({ roomId: testRoom.id })
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(200);
+
+      console.log(
+        'GM이 조회한 캐릭터 시트 목록:',
+        JSON.stringify(response.body, null, 2),
+      );
+
+      expect(response.body).toHaveLength(3); // 모든 참가자의 시트
+      const characterNames = response.body.map((sheet) => sheet.data.name);
+      expect(characterNames).toContain('Player Character');
+      expect(characterNames).toContain('GM Character');
+      expect(characterNames).toContain('Other Player Character');
+    });
+
+    it('성공: PLAYER는 공개된 캐릭터 시트만 조회할 수 있어야 한다', async () => {
+      // GM 캐릭터를 비공개로 설정 (기본값 유지)
+      gmSheet.isPublic = false;
+      await characterSheetRepository.save(gmSheet);
+
+      const response = await request(app.getHttpServer())
+        .get(`/character-sheets`)
+        .query({ roomId: testRoom.id })
+        .set('Authorization', `Bearer ${playerToken}`)
+        .expect(200);
+
+      console.log(
+        '플레이어가 조회한 캐릭터 시트 목록:',
+        JSON.stringify(response.body, null, 2),
+      );
+
+      expect(response.body).toHaveLength(2); // 공개된 시트만
+      response.body.forEach((sheet) => {
+        if (sheet.ownerId !== playerUser.id) {
+          expect(sheet.isPublic).toBe(true);
+        }
+      });
+
+      const characterNames = response.body.map((sheet) => sheet.data.name);
+      expect(characterNames).toContain('Player Character');
+      expect(characterNames).toContain('Other Player Character');
+      expect(characterNames).not.toContain('GM Character');
+    });
+
+    it('성공: 다른 플레이어도 공개된 캐릭터 시트만 조회할 수 있어야 한다', async () => {
+      // GM 캐릭터를 비공개로 설정
+      gmSheet.isPublic = false;
+      await characterSheetRepository.save(gmSheet);
+
+      const response = await request(app.getHttpServer())
+        .get(`/character-sheets`)
+        .query({ roomId: testRoom.id })
+        .set('Authorization', `Bearer ${otherPlayerToken}`)
+        .expect(200);
+
+      console.log(
+        '다른 플레이어가 조회한 캐릭터 시트 목록:',
+        JSON.stringify(response.body, null, 2),
+      );
+
+      expect(response.body).toHaveLength(2); // 공개된 시트만
+      const characterNames = response.body.map((sheet) => sheet.data.name);
+      expect(characterNames).toContain('Player Character');
+      expect(characterNames).toContain('Other Player Character');
+      expect(characterNames).not.toContain('GM Character');
+    });
+
+    it('성공: GM이 모든 시트를 공개로 설정하면 모든 플레이어가 조회 가능해야 한다', async () => {
+      // 모든 시트를 공개로 설정
+      playerSheet.isPublic = true;
+      gmSheet.isPublic = true;
+      otherPlayerSheet.isPublic = true;
+      await characterSheetRepository.save([
+        playerSheet,
+        gmSheet,
+        otherPlayerSheet,
+      ]);
+
+      const response = await request(app.getHttpServer())
+        .get(`/character-sheets`)
+        .query({ roomId: testRoom.id })
+        .set('Authorization', `Bearer ${playerToken}`)
+        .expect(200);
+
+      console.log(
+        '모든 시트가 공개일 때 플레이어가 조회한 목록:',
+        JSON.stringify(response.body, null, 2),
+      );
+
+      expect(response.body).toHaveLength(3); // 모든 시트가 공개이므로 모두 조회 가능
+      const characterNames = response.body.map((sheet) => sheet.data.name);
+      expect(characterNames).toContain('Player Character');
+      expect(characterNames).toContain('GM Character');
+      expect(characterNames).toContain('Other Player Character');
+    });
+
+    it('실패: 방에 참여하지 않은 사용자는 조회할 수 없어야 한다 (403)', async () => {
+      // 새로운 사용자 생성 (방에 참여하지 않음)
+      const outsiderUserInfo = createUserDto();
+      const outsiderToken = await signUpAndLogin(app, outsiderUserInfo);
+
+      await request(app.getHttpServer())
+        .get(`/character-sheets`)
+        .query({ roomId: testRoom.id })
+        .set('Authorization', `Bearer ${outsiderToken}`)
+        .expect(403);
+    });
+
+    it('실패: 유효하지 않은 roomId 형식으로 조회 시 400 에러 반환', async () => {
+      await request(app.getHttpServer())
+        .get(`/character-sheets`)
+        .query({ roomId: 'invalid-uuid-format' })
+        .set('Authorization', `Bearer ${playerToken}`)
+        .expect(400);
+    });
+
+    it('실패: 존재하지 않는 roomId로 조회 시 403 에러 반환 (참여 권한 없음)', async () => {
+      const nonExistentRoomId = '123e4567-e89b-12d3-a456-426614174000';
+
+      await request(app.getHttpServer())
+        .get(`/character-sheets`)
+        .query({ roomId: nonExistentRoomId })
+        .set('Authorization', `Bearer ${playerToken}`)
+        .expect(403);
+    });
+
+    it('성공: GM이 자신의 시트를 비공개로, 다른 플레이어의 시트를 공개로 설정한 경우', async () => {
+      // GM 시트는 비공개, 다른 플레이어 시트는 공개로 설정
+      gmSheet.isPublic = false;
+      playerSheet.isPublic = true;
+      otherPlayerSheet.isPublic = true;
+      await characterSheetRepository.save([
+        gmSheet,
+        playerSheet,
+        otherPlayerSheet,
+      ]);
+
+      const response = await request(app.getHttpServer())
+        .get(`/character-sheets`)
+        .query({ roomId: testRoom.id })
+        .set('Authorization', `Bearer ${playerToken}`)
+        .expect(200);
+
+      console.log(
+        'GM이 자신의 시트만 비공개로 설정한 경우 플레이어 조회 결과:',
+        JSON.stringify(response.body, null, 2),
+      );
+
+      expect(response.body).toHaveLength(2); // GM의 비공개 시트는 제외
+      const characterNames = response.body.map((sheet) => sheet.data.name);
+      expect(characterNames).toContain('Player Character');
+      expect(characterNames).toContain('Other Player Character');
+      expect(characterNames).not.toContain('GM Character');
+    });
+
+    it('성공: 모든 시트가 비공개 상태일 때 GM만 모든 시트 조회 가능', async () => {
+      // 모든 시트를 비공개로 설정
+      playerSheet.isPublic = false;
+      gmSheet.isPublic = false;
+      otherPlayerSheet.isPublic = false;
+      await characterSheetRepository.save([
+        playerSheet,
+        gmSheet,
+        otherPlayerSheet,
+      ]);
+
+      // GM 조회
+      let response = await request(app.getHttpServer())
+        .get(`/character-sheets`)
+        .query({ roomId: testRoom.id })
+        .set('Authorization', `Bearer ${gmToken}`)
+        .expect(200);
+
+      expect(response.body).toHaveLength(3); // GM은 모든 시트 조회 가능
+
+      // 플레이어 조회
+      response = await request(app.getHttpServer())
+        .get(`/character-sheets`)
+        .query({ roomId: testRoom.id })
+        .set('Authorization', `Bearer ${playerToken}`)
+        .expect(200);
+
+      expect(response.body).toHaveLength(1); // 자신의 시트만 조회 가능
+      expect(response.body[0].data.name).toBe('Player Character');
+    });
+  });
+
   // ========== 엣지 케이스 테스트 ==========
 
   describe('EC-01: 잘못된 participantId 입력', () => {

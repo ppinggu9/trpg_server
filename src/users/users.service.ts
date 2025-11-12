@@ -74,7 +74,6 @@ export class UsersService {
     return user;
   }
 
-  // only for authenticating
   async getUserByEmail(email: string): Promise<User> {
     return this.usersRepository
       .findOne({
@@ -176,7 +175,6 @@ export class UsersService {
     };
   }
 
-  // room에서 사용
   async updateUser(user: User): Promise<User> {
     return this.usersRepository.save(user);
   }
